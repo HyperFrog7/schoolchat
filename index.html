@@ -16090,24 +16090,26 @@
 
 
   </div>
-  <script>
-    window.openGNMath = () => {
-      fetch("https://cdn.jsdelivr.net/gh/HyperFrog7/schoolchat@main/gn-math.html?t=" + Date.now())
-        .then(response => response.text())
-        .then(text => {
-          const newWin = window.open("about:blank", "_blank");
-          if (newWin) {
-            newWin.document.open();
-            newWin.document.write(text);
-            newWin.document.close();
-          } else {
-            showToast('⚠️ Allow popups to play games');
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          showToast('⚠️ Failed to load math homework');
-        });
+  <script>window.openGNMath = () => {
+  fetch("https://cdn.jsdelivr.net/gh/HyperFrog7/schoolchat@main/gn-math.html?t=" + Date.now(), {
+    cache: "no-store"
+  })
+    .then(response => response.text())
+    .then(text => {
+      const newWin = window.open("about:blank", "_blank");
+      if (newWin) {
+        newWin.document.open();
+        newWin.document.write(text);
+        newWin.document.close();
+      } else {
+        showToast('⚠️ Allow popups to play games');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('⚠️ Failed to load math homework');
+    });
+};
     };
   </script>
 </body>
