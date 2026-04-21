@@ -6,285 +6,211 @@
 <title>SchoolChat AI</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{--bg:#0b0d11;--surface:#13151c;--surface2:#1a1d28;--surface3:#21253a;--border:#272b3d;--accent:#4f7fff;--accent-dim:#2a3f7a;--accent2:#ff5f7e;--green:#3ecf8e;--text:#e4e8f4;--muted:#636b8a;--muted2:#3a3f58;--bubble-self:#1a3166;--bubble-other:#1a1d28;--sidebar-w:240px;}
+:root{
+  --bg:#0b0d11;--surface:#13151c;--surface2:#1a1d28;--surface3:#21253a;
+  --border:#272b3d;--accent:#4f7fff;--accent-dim:#1a2d5e;--accent2:#ff5f7e;
+  --green:#3ecf8e;--text:#e4e8f4;--muted:#636b8a;--muted2:#3a3f58;
+  --bubble-self:#1a3166;--bubble-other:#1a1d28;--sidebar-w:248px;
+}
 html,body{height:100%;overflow:hidden;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;font-size:14px;line-height:1.5;}
+::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 
 /* Auth */
-#auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;}
-.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:36px 32px;width:340px;display:flex;flex-direction:column;align-items:center;gap:16px;}
-.auth-logo{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#7c5cff);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;}
-.auth-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;background:linear-gradient(135deg,#4f7fff,#a0c4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.auth-sub{font-size:0.8rem;color:var(--muted);text-align:center;line-height:1.5;}
-.auth-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;padding:10px 14px;outline:none;transition:border-color 0.2s;}
+#auth-screen{position:fixed;inset:0;background:radial-gradient(ellipse at 30% 20%,#1a2a5e33,transparent 60%),var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:42px 36px;width:360px;display:flex;flex-direction:column;align-items:center;gap:18px;box-shadow:0 40px 100px #00000077;animation:fadeUp .4s cubic-bezier(.16,1,.3,1) both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+.auth-logo{width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,var(--accent),#7c5cff);display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:#fff;box-shadow:0 8px 24px #4f7fff44;}
+.auth-title{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;background:linear-gradient(135deg,#4f7fff,#a0c4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.auth-sub{font-size:.8rem;color:var(--muted);text-align:center;line-height:1.6;}
+.auth-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:11px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;padding:11px 14px;outline:none;transition:border-color .2s;}
 .auth-input:focus{border-color:var(--accent);}
 .auth-input::placeholder{color:var(--muted2);}
-.auth-btn{width:100%;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;transition:opacity 0.2s;}
-.auth-btn:hover{opacity:0.85;}
-.auth-btn:disabled{opacity:0.4;cursor:not-allowed;}
-.auth-err{font-size:0.78rem;color:var(--accent2);text-align:center;display:none;width:100%;}
+.auth-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--accent),#7c5cff);border:none;border-radius:11px;color:#fff;font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;box-shadow:0 4px 16px #4f7fff44;}
+.auth-btn:hover{opacity:.9;transform:translateY(-1px);}
+.auth-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.auth-err{font-size:.78rem;color:var(--accent2);text-align:center;display:none;width:100%;}
 
-/* Sidebar */
+/* Layout */
 .sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;height:100vh;}
-.sidebar-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.sidebar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;}
-.sidebar-logo-icon{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#7c5cff);display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#fff;flex-shrink:0;}
-.sidebar-logo-text{background:linear-gradient(135deg,#4f7fff,#a0c4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.sidebar-scroll{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;overscroll-behavior:contain;padding:8px 0;}
-.sidebar-scroll::-webkit-scrollbar{width:3px;}
-.sidebar-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-.sidebar-label{font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:10px 16px 5px;}
-.new-chat-btn{display:flex;align-items:center;gap:8px;width:calc(100% - 20px);margin:4px 10px 8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.83rem;font-weight:500;cursor:pointer;transition:background 0.15s,border-color 0.15s;text-align:left;}
-.new-chat-btn:hover{background:var(--surface3);border-color:var(--accent);}
-.delete-all-btn{display:flex;align-items:center;gap:8px;width:calc(100% - 20px);margin:4px 10px 8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:0.83rem;font-weight:500;cursor:pointer;transition:background 0.15s,border-color 0.15s,color 0.15s;text-align:left;}
-.delete-all-btn:hover{background:var(--surface3);border-color:var(--accent2);color:var(--accent2);}
-.hist-item{display:flex;align-items:center;gap:8px;padding:7px 14px;margin:0 6px 1px;border-radius:8px;font-size:0.82rem;color:var(--muted);cursor:pointer;overflow:hidden;transition:background 0.12s,color 0.12s;}
-.hist-item:hover{background:var(--surface2);color:var(--text);}
-.hist-item.active{background:var(--surface2);color:var(--text);}
-.hist-icon{font-size:0.72rem;flex-shrink:0;opacity:0.5;}
+.sidebar-hdr{padding:15px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.s-logo-icon{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#7c5cff);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;flex-shrink:0;}
+.s-logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;background:linear-gradient(135deg,#4f7fff,#a0c4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.sidebar-scroll{flex:1;overflow-y:auto;min-height:0;padding:8px 0;}
+.s-label{font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:10px 16px 5px;}
+.new-chat-btn{display:flex;align-items:center;gap:8px;width:calc(100% - 16px);margin:4px 8px 6px;padding:9px 13px;background:var(--accent-dim);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);border-radius:10px;color:var(--accent);font-family:'DM Sans',sans-serif;font-size:.83rem;font-weight:600;cursor:pointer;transition:background .15s;}
+.new-chat-btn:hover{background:color-mix(in srgb,var(--accent) 22%,transparent);}
+.hist-item{display:flex;align-items:center;gap:8px;padding:7px 14px;margin:0 6px 1px;border-radius:9px;font-size:.82rem;color:var(--muted);cursor:pointer;transition:background .12s,color .12s;}
+.hist-item:hover,.hist-item.active{background:var(--surface2);color:var(--text);}
+.hist-icon{font-size:.7rem;flex-shrink:0;opacity:.5;}
 .hist-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
-.hist-del{display:none;flex-shrink:0;background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.95rem;padding:0 1px;line-height:1;}
+.hist-del{display:none;flex-shrink:0;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.95rem;padding:0 2px;line-height:1;}
 .hist-item:hover .hist-del{display:block;}
 .hist-del:hover{color:var(--accent2);}
 .sidebar-footer{border-top:1px solid var(--border);flex-shrink:0;}
-.sidebar-user{padding:11px 12px;display:flex;align-items:center;gap:10px;}
-.user-avatar{width:30px;height:30px;border-radius:50%;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;overflow:hidden;}
-.user-avatar img{width:100%;height:100%;object-fit:cover;}
+.sidebar-user{padding:12px;display:flex;align-items:center;gap:10px;}
+.user-av{width:32px;height:32px;border-radius:50%;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;overflow:hidden;}
+.user-av img{width:100%;height:100%;object-fit:cover;}
 .user-info{flex:1;overflow:hidden;}
-.user-name{font-size:0.83rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.user-email{font-size:0.68rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-name{font-size:.84rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-sub{font-size:.68rem;color:var(--muted);}
 .sidebar-links{display:flex;border-top:1px solid var(--border);}
-.slink{flex:1;padding:8px 6px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:0.72rem;color:var(--muted);text-decoration:none;cursor:pointer;background:none;border:none;font-family:inherit;transition:color 0.15s,background 0.15s;}
+.slink{flex:1;padding:8px 6px;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--muted);cursor:pointer;background:none;border:none;font-family:inherit;transition:color .15s,background .15s;}
 .slink:hover{color:var(--text);background:var(--surface2);}
 .slink+.slink{border-left:1px solid var(--border);}
 
-/* Settings panel */
-#ai-settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;display:none;align-items:flex-end;justify-content:flex-end;}
-#ai-settings-overlay.open{display:flex;}
-#ai-settings-panel{width:380px;height:100vh;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.25s cubic-bezier(.16,1,.3,1);overflow:hidden;}
-#ai-settings-overlay.open #ai-settings-panel{transform:translateX(0);}
-.sp-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.sp-title{font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;}
-.sp-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;line-height:1;padding:2px 6px;border-radius:6px;transition:color 0.15s;}
-.sp-close:hover{color:var(--text);}
-.sp-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-.sp-tab{flex:1;padding:9px 6px;font-size:0.75rem;font-weight:600;color:var(--muted);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s;margin-bottom:-1px;}
-.sp-tab:hover{color:var(--text);}
-.sp-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
-.sp-body{flex:1;overflow-y:auto;padding:18px;}
-.sp-body::-webkit-scrollbar{width:3px;}
-.sp-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-.sp-section{margin-bottom:22px;}
-.sp-label{font-size:0.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;}
-.sp-desc{font-size:0.75rem;color:var(--muted);margin-bottom:8px;line-height:1.5;}
-.sp-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;padding:10px 12px;outline:none;resize:vertical;min-height:90px;line-height:1.55;transition:border-color 0.2s;}
-.sp-textarea:focus{border-color:var(--accent);}
-.sp-textarea::placeholder{color:var(--muted2);}
-.sp-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;padding:9px 12px;outline:none;transition:border-color 0.2s;}
-.sp-input:focus{border-color:var(--accent);}
-.sp-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:10px;margin-bottom:8px;}
-.sp-row-label{font-size:0.83rem;}
-.sp-row-sub{font-size:0.71rem;color:var(--muted);margin-top:1px;}
-.sp-toggle{width:36px;height:20px;border-radius:20px;background:var(--muted2);border:none;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
-.sp-toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 0.2s;}
-.sp-toggle.on{background:var(--accent);}
-.sp-toggle.on::after{transform:translateX(16px);}
-.sp-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;padding:9px 12px;outline:none;cursor:pointer;appearance:none;transition:border-color 0.2s;}
-.sp-select:focus{border-color:var(--accent);}
-.sp-footer{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;}
-.sp-save{flex:1;padding:9px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;transition:opacity 0.2s;}
-.sp-save:hover{opacity:0.85;}
-.sp-reset{padding:9px 14px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:0.85rem;cursor:pointer;transition:color 0.15s,border-color 0.15s;}
-.sp-reset:hover{color:var(--accent2);border-color:var(--accent2);}
-.mem-item{display:flex;align-items:flex-start;gap:8px;padding:9px 11px;background:var(--surface2);border-radius:9px;margin-bottom:6px;font-size:0.8rem;line-height:1.5;}
-.mem-item-text{flex:1;color:var(--text);}
-.mem-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;flex-shrink:0;padding:0 2px;transition:color 0.15s;}
-.mem-del:hover{color:var(--accent2);}
-.mem-add-row{display:flex;gap:7px;margin-top:8px;}
-.mem-add-inp{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;padding:8px 11px;outline:none;transition:border-color 0.2s;}
-.mem-add-inp:focus{border-color:var(--accent);}
-.mem-add-btn{padding:8px 13px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity 0.2s;}
-.mem-add-btn:hover{opacity:0.85;}
-.sp-badge{display:inline-block;font-size:0.65rem;font-weight:600;padding:2px 7px;border-radius:20px;background:var(--accent-dim);color:var(--accent);margin-left:6px;vertical-align:middle;}
-.ai-mem-item{display:flex;align-items:flex-start;gap:8px;padding:9px 11px;background:var(--surface2);border-radius:9px;margin-bottom:6px;font-size:0.8rem;line-height:1.5;}
-.ai-mem-text{flex:1;color:var(--text);font-style:italic;}
-.ai-mem-delete{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;flex-shrink:0;padding:0 2px;transition:color 0.15s;}
-.ai-mem-delete:hover{color:var(--accent2);}
-
 /* Main */
 #main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0;}
-#topbar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:48px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:0 18px;height:52px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
 .topbar-left{display:flex;align-items:center;gap:10px;}
-.topbar-title{font-weight:700;font-size:0.95rem;font-family:'DM Sans',sans-serif;}
+.topbar-title{font-weight:700;font-size:.95rem;}
 .model-wrap{position:relative;display:inline-flex;align-items:center;}
-#model-select{appearance:none;-webkit-appearance:none;background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:500;padding:4px 22px 4px 10px;cursor:pointer;outline:none;transition:border-color 0.15s;}
+#model-select{appearance:none;-webkit-appearance:none;background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.73rem;font-weight:600;padding:4px 22px 4px 10px;cursor:pointer;outline:none;transition:border-color .15s;}
 #model-select:hover{border-color:var(--accent);}
-.model-arrow{pointer-events:none;position:absolute;right:8px;font-size:0.5rem;color:var(--muted);}
+.model-arrow{pointer-events:none;position:absolute;right:8px;font-size:.5rem;color:var(--muted);}
 .topbar-right{display:flex;gap:6px;align-items:center;}
-.tbtn{background:none;border:1px solid var(--border);border-radius:7px;color:var(--muted);cursor:pointer;font-size:0.72rem;padding:3px 9px;font-family:'DM Sans',sans-serif;transition:background 0.15s,color 0.15s,border-color 0.15s;}
+.tbtn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:.72rem;padding:4px 10px;font-family:'DM Sans',sans-serif;transition:background .15s,color .15s,border-color .15s;}
 .tbtn:hover{border-color:var(--accent);color:var(--text);}
 .tbtn.danger:hover{border-color:var(--accent2);color:var(--accent2);}
-.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--muted2);display:inline-block;transition:background 0.3s;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--muted2);display:inline-block;transition:background .3s;flex-shrink:0;}
 .sync-dot.synced{background:var(--green);}
 .sync-dot.syncing{background:var(--accent);animation:pulse 1s infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 
-/* Screen bar */
-#screen-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:7px 16px;display:none;align-items:center;gap:12px;flex-shrink:0;}
+/* Bars */
+#screen-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 18px;display:none;align-items:center;gap:12px;flex-shrink:0;}
 #screen-bar.on{display:flex;}
-#screen-preview{width:80px;height:45px;border-radius:6px;object-fit:cover;background:var(--surface3);border:1px solid var(--border);flex-shrink:0;}
-.screen-info-title{font-size:0.78rem;font-weight:600;color:var(--green);display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;}
-.screen-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;flex-shrink:0;}
-.screen-info-sub{font-size:0.7rem;color:var(--muted);margin-top:2px;}
-.screen-stop{background:none;border:1px solid var(--border);border-radius:7px;color:var(--muted);cursor:pointer;font-size:0.72rem;padding:3px 9px;font-family:inherit;transition:color 0.15s,border-color 0.15s;flex-shrink:0;}
+.screen-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;flex-shrink:0;}
+.screen-title{font-size:.78rem;font-weight:600;color:var(--green);display:flex;align-items:center;gap:6px;}
+.screen-sub{font-size:.7rem;color:var(--muted);margin-top:2px;}
+.screen-stop{background:none;border:1px solid var(--border);border-radius:7px;color:var(--muted);cursor:pointer;font-size:.72rem;padding:4px 10px;font-family:inherit;margin-left:auto;transition:color .15s,border-color .15s;}
 .screen-stop:hover{color:var(--accent2);border-color:var(--accent2);}
-
-/* Image preview bar */
-#img-preview-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 16px;display:none;align-items:center;gap:10px;flex-shrink:0;}
+#img-preview-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 18px;display:none;align-items:center;gap:10px;flex-shrink:0;}
 #img-preview-bar.on{display:flex;}
-#img-preview-thumb{width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid var(--border);}
-.img-preview-info{flex:1;min-width:0;}
-.img-preview-name{font-size:0.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.img-preview-size{font-size:0.7rem;color:var(--muted);}
-.img-preview-clear{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;padding:2px 6px;border-radius:6px;transition:color 0.15s;}
-.img-preview-clear:hover{color:var(--accent2);}
+#img-thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;border:1px solid var(--border);}
+.img-info{flex:1;min-width:0;}
+.img-name{font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.img-size{font-size:.7rem;color:var(--muted);}
+.img-clear{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;padding:2px 6px;border-radius:6px;transition:color .15s;}
+.img-clear:hover{color:var(--accent2);}
 
 /* Messages */
-#msgs{flex:1;overflow-y:auto;padding:20px 0;display:flex;flex-direction:column;overscroll-behavior:contain;}
-#msgs::-webkit-scrollbar{width:4px;}
-#msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
-.msgs-inner{width:100%;max-width:720px;margin:0 auto;padding:0 20px;display:flex;flex-direction:column;gap:3px;flex:1;}
+#msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;overscroll-behavior:contain;}
+.msgs-inner{width:100%;max-width:740px;margin:0 auto;padding:24px 20px 12px;display:flex;flex-direction:column;gap:4px;flex:1;}
 
 /* Welcome */
-#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;padding:40px 20px;text-align:center;}
-.welcome-icon{font-size:2rem;background:linear-gradient(135deg,var(--accent),#7c5cff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2px;}
-#welcome h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;color:var(--text);margin:0;}
-#welcome p{font-size:0.82rem;color:var(--muted);max-width:320px;line-height:1.55;margin:0;}
-.chips{display:flex;flex-direction:column;gap:6px;width:100%;max-width:320px;margin-top:4px;}
-.chip{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;font-size:0.78rem;color:var(--muted);cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;text-align:left;font-family:'DM Sans',sans-serif;}
-.chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:14px;padding:40px 20px;text-align:center;}
+.welcome-icon{font-size:2.8rem;background:linear-gradient(135deg,var(--accent),#7c5cff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+#welcome h2{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;margin:0;background:linear-gradient(135deg,var(--text) 40%,var(--muted));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+#welcome p{font-size:.85rem;color:var(--muted);max-width:380px;line-height:1.65;margin:0;}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:500px;margin-top:6px;}
+.chip{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 14px;font-size:.8rem;color:var(--muted);cursor:pointer;transition:all .15s;text-align:left;font-family:'DM Sans',sans-serif;line-height:1.4;}
+.chip:hover{border-color:var(--accent);color:var(--text);background:var(--accent-dim);}
+.chip-icon{font-size:1.1rem;margin-bottom:4px;display:block;}
+.chip-label{font-weight:600;color:var(--text);font-size:.79rem;}
 
 /* Messages */
-.ai-msg{display:flex;gap:8px;align-items:flex-start;animation:popIn 0.18s cubic-bezier(.16,1,.3,1) both;margin-bottom:2px;position:relative;}
-@keyframes popIn{from{opacity:0;transform:translateY(6px) scale(0.98);}to{opacity:1;transform:none;}}
+.ai-msg{display:flex;gap:10px;align-items:flex-start;animation:popIn .18s cubic-bezier(.16,1,.3,1) both;margin-bottom:4px;}
+@keyframes popIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 .ai-msg.user{flex-direction:row-reverse;}
-.ai-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.85rem;margin-top:2px;overflow:hidden;}
-.ai-avatar.bot-av{background:linear-gradient(135deg,var(--accent),#7c5cff);color:#fff;}
-.ai-avatar.user-av{background:var(--surface3);border:1px solid var(--border);color:var(--muted);font-size:0.8rem;}
-.ai-avatar img{width:100%;height:100%;object-fit:cover;}
-.msg-col{display:flex;flex-direction:column;gap:4px;min-width:0;max-width:min(560px,80%);}
+.ai-av{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.8rem;margin-top:2px;overflow:hidden;}
+.ai-av.bot{background:linear-gradient(135deg,var(--accent),#7c5cff);color:#fff;}
+.ai-av.usr{background:var(--surface3);border:1px solid var(--border);color:var(--muted);}
+.ai-av img{width:100%;height:100%;object-fit:cover;}
+.msg-col{display:flex;flex-direction:column;gap:5px;min-width:0;max-width:min(600px,83%);}
 .ai-msg.user .msg-col{align-items:flex-end;}
-.ai-bubble{padding:9px 13px;border-radius:14px;font-size:0.88rem;line-height:1.6;word-break:break-word;}
+.ai-bubble{padding:10px 14px;border-radius:15px;font-size:.88rem;line-height:1.65;word-break:break-word;}
 .ai-msg.user .ai-bubble{background:var(--bubble-self);border-bottom-right-radius:4px;color:#bdd0ff;}
 .ai-msg.ai .ai-bubble{background:var(--bubble-other);border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--text);}
-.ai-bubble p{margin:0 0 7px;}.ai-bubble p:last-child{margin:0;}
-.ai-bubble h1{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;margin:10px 0 4px;}
-.ai-bubble h2{font-family:'Syne',sans-serif;font-size:0.97rem;font-weight:700;margin:8px 0 3px;}
-.ai-bubble h3{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;margin:7px 0 3px;}
-.ai-bubble ul,.ai-bubble ol{padding-left:18px;margin:4px 0 7px;}
-.ai-bubble li{margin-bottom:4px;line-height:1.55;}
+.ai-bubble p{margin:0 0 8px;}.ai-bubble p:last-child{margin:0;}
+.ai-bubble h1{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;margin:12px 0 5px;}
+.ai-bubble h2{font-family:'Syne',sans-serif;font-size:.97rem;font-weight:700;margin:10px 0 4px;}
+.ai-bubble h3{font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;margin:8px 0 3px;}
+.ai-bubble ul,.ai-bubble ol{padding-left:20px;margin:5px 0 8px;}
+.ai-bubble li{margin-bottom:4px;}
 .ai-bubble strong{font-weight:700;}
-.ai-bubble em{font-style:italic;opacity:0.85;}
-.ai-bubble code{background:var(--surface3);border-radius:4px;padding:1px 5px;font-family:monospace;font-size:0.82em;color:#a0c4ff;}
-.ai-bubble pre{background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:0;overflow:hidden;margin:7px 0;position:relative;}
-.ai-bubble pre code{display:block;padding:11px 13px;font-size:0.82rem;color:var(--text);line-height:1.6;overflow-x:auto;background:none;border:none;}
-.pre-copy{position:absolute;top:6px;right:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:0.68rem;padding:2px 7px;cursor:pointer;transition:color 0.15s,border-color 0.15s;}
+.ai-bubble em{font-style:italic;opacity:.85;}
+.ai-bubble code{background:var(--surface3);border-radius:5px;padding:1px 5px;font-family:monospace;font-size:.82em;color:#a0c4ff;}
+.ai-bubble pre{background:var(--surface3);border:1px solid var(--border);border-radius:11px;padding:0;overflow:hidden;margin:8px 0;position:relative;}
+.ai-bubble pre code{display:block;padding:12px 14px;font-size:.82rem;color:var(--text);line-height:1.65;overflow-x:auto;background:none;border:none;}
+.pre-copy{position:absolute;top:7px;right:9px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.67rem;padding:2px 7px;cursor:pointer;transition:color .15s,border-color .15s;}
 .pre-copy:hover{color:var(--accent);border-color:var(--accent);}
 .ai-bubble blockquote{border-left:3px solid var(--accent);padding:4px 12px;margin:6px 0;color:var(--muted);font-style:italic;}
 .ai-bubble hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
-.ai-bubble table{border-collapse:collapse;width:100%;margin:8px 0;font-size:0.84rem;}
-.ai-bubble th{background:var(--surface3);padding:6px 10px;border:1px solid var(--border);font-weight:600;text-align:left;}
-.ai-bubble td{padding:5px 10px;border:1px solid var(--border);}
-.ai-bubble tr:nth-child(even) td{background:rgba(255,255,255,0.02);}
-.think-label{font-size:0.72rem;color:var(--muted);margin-bottom:5px;display:flex;align-items:center;gap:4px;}
-.think-label.thinking-mode{color:var(--accent);font-weight:600;}
+.ai-bubble table{border-collapse:collapse;width:100%;margin:8px 0;font-size:.84rem;}
+.ai-bubble th{background:var(--surface3);padding:7px 10px;border:1px solid var(--border);font-weight:600;text-align:left;}
+.ai-bubble td{padding:6px 10px;border:1px solid var(--border);}
+.ai-bubble tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+.ai-bubble a{color:var(--accent);}
+
+/* Think box */
+.think-box{background:color-mix(in srgb,var(--accent) 7%,var(--surface2));border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));border-left:3px solid var(--accent);border-radius:11px;padding:10px 13px;margin-bottom:5px;font-size:.82rem;color:var(--muted);line-height:1.55;}
+.think-box-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.think-box-lbl{font-size:.68rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:5px;}
+.think-box-toggle{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:.68rem;padding:1px 7px;font-family:inherit;transition:color .15s,border-color .15s;}
+.think-box-toggle:hover{color:var(--accent);border-color:var(--accent);}
+.think-box-content{overflow:hidden;transition:max-height .3s ease;}
+.think-box-content.collapsed{max-height:0 !important;}
+
+/* Typing dots */
 .ai-typing-dot{display:inline-flex;gap:4px;align-items:center;padding:2px 0;}
-.ai-typing-dot span{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:typingBounce 1.2s infinite ease-in-out;}
-.ai-typing-dot span:nth-child(2){animation-delay:0.2s;}
-.ai-typing-dot span:nth-child(3){animation-delay:0.4s;}
-.ai-typing-dot.thinking-mode span{background:var(--accent);}
-@keyframes typingBounce{0%,80%,100%{transform:scale(0.75);opacity:0.4;}40%{transform:scale(1);opacity:1;}}
-@keyframes fadeOut{from{opacity:1;}to{opacity:0;}}
-@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-.ai-bubble.fade-out{animation:fadeOut 0.3s ease-out forwards;}
-.ai-bubble.fade-in{animation:fadeIn 0.4s ease-in;}
-.ai-bubble.thinking-content{color:var(--muted);font-style:italic;opacity:0.8;}
-.ai-bubble.thinking-content strong{color:var(--muted);font-weight:600;}
-.ai-bubble.thinking-content em{color:var(--muted);}
-.thinking-bubble{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:9px 13px;font-size:0.88rem;line-height:1.6;word-break:break-word;color:var(--muted);font-style:italic;opacity:0.8;margin-bottom:4px;position:relative;}
-.thinking-bubble strong{color:var(--muted);font-weight:600;}
-.thinking-bubble em{color:var(--muted);}
-.thinking-bubble.collapsed{max-height:40px;overflow:hidden;cursor:pointer;transition:max-height 0.3s ease;}
-.thinking-bubble.collapsed::after{content:'▶ Show thinking';position:absolute;bottom:4px;right:8px;font-size:0.7rem;color:var(--accent);font-style:normal;}
-.thinking-bubble.expanded{max-height:none;cursor:pointer;transition:max-height 0.3s ease;}
-.thinking-bubble.expanded::after{content:'▼ Hide thinking';position:absolute;bottom:4px;right:8px;font-size:0.7rem;color:var(--accent);font-style:normal;}
-.thinking-container{background:#e3f2fd;border:2px dashed #90caf9;border-radius:12px;padding:16px;margin-bottom:12px;position:relative;font-size:0.9rem;line-height:1.6;color:#1565c0;transition:all 0.3s ease;}
-.thinking-container.collapsed{padding:8px 16px;}
-.thinking-container-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.thinking-container-title{display:flex;align-items:center;font-size:0.75rem;font-weight:700;color:#0d47a1;text-transform:uppercase;letter-spacing:0.5px;}
-.thinking-container-icon{width:16px;height:16px;margin-right:8px;animation:pulse 2s infinite;}
-@keyframes pulse{0%{opacity:0.6;}50%{opacity:1;}100%{opacity:0.6;}}
-.thinking-container-collapse{background:none;border:1px solid #90caf9;color:#1565c0;cursor:pointer;font-size:0.7rem;padding:2px 6px;border-radius:4px;transition:all 0.2s ease;text-transform:uppercase;font-weight:600;}
-.thinking-container-collapse:hover{background:#90caf9;color:#0d47a1;}
-.thinking-container-content{color:#1565c0;font-style:italic;margin-top:8px;}
-.thinking-container.collapsed .thinking-container-content{display:none;}
-.thinking-container.collapsed .thinking-container-header{margin-bottom:0;}
+.ai-typing-dot span{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:bounce 1.2s infinite ease-in-out;}
+.ai-typing-dot span:nth-child(2){animation-delay:.2s;}
+.ai-typing-dot span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,80%,100%{transform:scale(.75);opacity:.4;}40%{transform:scale(1);opacity:1;}}
+.ai-cursor{display:inline-block;color:var(--accent);animation:blink .6s steps(1) infinite;margin-left:1px;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
 
-/* YouTube embed */
-.youtube-embed{border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);margin:8px 0;max-width:100%;background:#000;}
-.youtube-embed iframe{border-radius:12px;width:100%;height:315px;border:none;}
-.youtube-link-container{margin:8px 0;padding:8px;background:var(--surface2);border-radius:8px;border-left:4px solid #ff0000;}
-.youtube-link-text{color:var(--text);font-size:0.85rem;line-height:1.4;}
-.youtube-link-title{font-weight:600;color:#ff0000;margin-bottom:4px;display:flex;align-items:center;gap:6px;}
-.youtube-link-title::before{content:'📺';font-size:1.1rem;}
+/* Msg image */
+.msg-img{max-width:280px;max-height:240px;border-radius:11px;object-fit:cover;display:block;cursor:zoom-in;border:1px solid var(--border);}
 
-/* Message image */
-.msg-img{max-width:260px;max-height:220px;border-radius:10px;object-fit:cover;display:block;cursor:zoom-in;border:1px solid var(--border);}
-
-/* Message actions */
-.msg-actions{display:flex;gap:3px;opacity:0;transition:opacity 0.15s;margin-top:2px;}
+/* Actions */
+.msg-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s;margin-top:3px;}
 .ai-msg:hover .msg-actions{opacity:1;}
 .ai-msg.user .msg-actions{justify-content:flex-end;}
-.mact{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:0.68rem;padding:2px 7px;font-family:'DM Sans',sans-serif;transition:color 0.15s,border-color 0.15s,background 0.15s;}
+.mact{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:.68rem;padding:2px 8px;font-family:'DM Sans',sans-serif;transition:color .15s,border-color .15s,background .15s;}
 .mact:hover{color:var(--text);border-color:var(--accent);background:var(--accent-dim);}
 .mact.copied{color:var(--green);border-color:var(--green);}
 
-/* Input bar */
-#ibar{padding:10px 14px 14px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
-#ibar-inner{max-width:720px;margin:0 auto;}
-.ai-input-wrap{display:flex;gap:7px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:6px 8px;transition:border-color 0.2s;}
-.ai-input-wrap:focus-within{border-color:var(--accent);}
-.input-icon-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 5px;border-radius:7px;flex-shrink:0;transition:color 0.15s;display:flex;align-items:center;}
-.input-icon-btn:hover{color:var(--accent);}
-.input-icon-btn.on{color:var(--green);}
-#inp{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;resize:none;max-height:120px;line-height:1.5;padding:3px 0;}
+/* Input */
+#ibar{padding:10px 16px 16px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
+#ibar-inner{max-width:740px;margin:0 auto;}
+.input-wrap{display:flex;gap:8px;align-items:center;background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:8px 8px 8px 14px;transition:border-color .2s,box-shadow .2s;}
+.input-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent);}
+.icon-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:5px;border-radius:8px;flex-shrink:0;transition:color .15s,background .15s;display:flex;align-items:center;}
+.icon-btn:hover{color:var(--accent);background:var(--accent-dim);}
+.icon-btn.on{color:var(--green);}
+#inp{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;resize:none;max-height:120px;line-height:1.5;padding:2px 0;}
 #inp::placeholder{color:var(--muted2);}
-#send-btn{width:32px;height:32px;border-radius:8px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.2s,transform 0.15s;}
-#send-btn:hover:not(:disabled){opacity:0.85;transform:scale(1.06);}
-#send-btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
-.input-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px;}
-.input-hint{font-size:0.7rem;color:var(--muted2);}
-#char-count{font-size:0.7rem;color:var(--muted2);transition:color 0.2s;}
+#send-btn{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#7c5cff);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s,transform .15s;box-shadow:0 2px 10px #4f7fff44;}
+#send-btn:hover:not(:disabled){opacity:.88;transform:scale(1.07);}
+#send-btn:disabled{opacity:.3;cursor:not-allowed;transform:none;}
+.input-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 2px;}
+.input-hint{font-size:.68rem;color:var(--muted2);}
+#char-count{font-size:.68rem;color:var(--muted2);transition:color .2s;}
 #char-count.warn{color:#f0a500;}
 #char-count.over{color:var(--accent2);}
 
 /* Lightbox */
-#lightbox{position:fixed;inset:0;background:#000c;z-index:9999;display:none;align-items:center;justify-content:center;cursor:zoom-out;}
+#lightbox{position:fixed;inset:0;background:#000d;z-index:9999;display:none;align-items:center;justify-content:center;cursor:zoom-out;}
 #lightbox.on{display:flex;}
-#lightbox img{max-width:92vw;max-height:92vh;border-radius:10px;object-fit:contain;cursor:default;}
+#lightbox img{max-width:92vw;max-height:92vh;border-radius:12px;object-fit:contain;cursor:default;}
 
 /* Toast */
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 18px;font-size:0.8rem;color:var(--text);pointer-events:none;opacity:0;transition:opacity 0.2s;z-index:9999;white-space:nowrap;}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 20px;font-size:.8rem;color:var(--text);pointer-events:none;opacity:0;transition:opacity .2s;z-index:9999;white-space:nowrap;box-shadow:0 8px 24px #0006;}
 #toast.show{opacity:1;}
 
-@media(max-width:620px){.sidebar{display:none;}.msgs-inner{padding:0 12px;}#topbar{padding:0 12px;}#ibar{padding:8px 12px 12px;}}
+@media(max-width:640px){.sidebar{display:none;}.chips{grid-template-columns:1fr;}.msgs-inner{padding:16px 14px;}#ibar{padding:8px 12px 12px;}}
 </style>
 </head>
 <body>
 
-<!-- Auth screen -->
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">✦</div>
@@ -293,43 +219,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     <div class="auth-err" id="auth-err"></div>
     <input class="auth-input" id="auth-user" type="text" placeholder="Username" autocomplete="username" spellcheck="false">
     <input class="auth-input" id="auth-pass" type="password" placeholder="Password" autocomplete="current-password">
-    <button class="auth-btn" id="auth-btn">Sign in</button>
+    <button class="auth-btn" id="auth-btn">Sign in →</button>
   </div>
 </div>
 
-<!-- App -->
 <div id="app" style="display:none;width:100%;height:100%;flex-direction:row;">
 
 <div class="sidebar">
-  <div class="sidebar-header">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-icon">✦</div>
-      <span class="sidebar-logo-text">SchoolChat AI</span>
-    </div>
+  <div class="sidebar-hdr">
+    <div class="s-logo-icon">✦</div>
+    <span class="s-logo-text">SchoolChat AI</span>
   </div>
   <div class="sidebar-scroll">
-    <div class="sidebar-label">Conversations</div>
+    <div class="s-label">Conversations</div>
     <button class="new-chat-btn" id="new-chat-btn">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       New conversation
-    </button>
-    <button class="delete-all-btn" id="delete-all-btn">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M19 7v2a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7m5 10a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a4 4 0 0 1 4 4h2a4 4 0 0 1 4-4v-2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1z"/></svg>
-      Delete All Chats
     </button>
     <div id="history-list"></div>
   </div>
   <div class="sidebar-footer">
     <div class="sidebar-user">
-      <div class="user-avatar" id="user-av">👤</div>
+      <div class="user-av" id="user-av">👤</div>
       <div class="user-info">
         <div class="user-name" id="user-name">…</div>
-        <div class="user-email" id="user-email"></div>
+        <div class="user-sub" id="user-email"></div>
       </div>
     </div>
     <div class="sidebar-links">
       <a href="/" class="slink">← SchoolChat</a>
-      <button class="slink" id="ai-settings-btn">⚙ Settings</button>
       <button class="slink" id="sign-out-btn">Sign out</button>
     </div>
   </div>
@@ -348,39 +266,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       </div>
     </div>
     <div class="topbar-right">
-      <span class="sync-dot" id="sync-dot" title="Sync status"></span>
-      <button class="tbtn" id="export-btn" title="Export chat as text">⬇ Export</button>
+      <span class="sync-dot" id="sync-dot"></span>
+      <button class="tbtn" id="export-btn">⬇ Export</button>
       <button class="tbtn danger" id="clear-btn">Clear</button>
     </div>
   </div>
 
   <div id="screen-bar">
-    <img id="screen-preview" alt="screen">
-    <div style="flex:1;min-width:0;">
-      <div class="screen-info-title"><span class="screen-dot"></span> Screen sharing active</div>
-      <div class="screen-info-sub">AI sees your screen with each message</div>
+    <div>
+      <div class="screen-title"><span class="screen-dot"></span> Screen sharing active</div>
+      <div class="screen-sub">AI sees your screen with each message</div>
     </div>
     <button class="screen-stop" id="screen-stop">Stop sharing</button>
   </div>
 
-  <!-- Image preview bar -->
   <div id="img-preview-bar">
-    <img id="img-preview-thumb" alt="preview">
-    <div class="img-preview-info">
-      <div class="img-preview-name" id="img-preview-name"></div>
-      <div class="img-preview-size" id="img-preview-size"></div>
+    <img id="img-thumb" alt="preview">
+    <div class="img-info">
+      <div class="img-name" id="img-name"></div>
+      <div class="img-size" id="img-size"></div>
     </div>
-    <button class="img-preview-clear" id="img-preview-clear" title="Remove image">×</button>
+    <button class="img-clear" id="img-clear">×</button>
   </div>
 
-  <canvas id="sc" style="display:none;"></canvas>
   <video id="sv" style="display:none;" autoplay muted playsinline></video>
 
   <div id="msgs">
     <div class="msgs-inner" id="msgs-inner">
       <div id="welcome">
         <div class="welcome-icon">✦</div>
-        <h3>SchoolChat AI</h3>
+        <h2>SchoolChat AI</h2>
         <p>Ask me anything — homework help, essay feedback, math, science, or just thinking out loud.</p>
         <div class="chips" id="chips"></div>
       </div>
@@ -389,14 +304,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 
   <div id="ibar">
     <div id="ibar-inner">
-      <div class="ai-input-wrap">
-        <button class="input-icon-btn" id="screen-btn" title="Share your screen">
+      <div class="input-wrap">
+        <button class="icon-btn" id="screen-btn" title="Share your screen">
           <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="4" width="16" height="11" rx="2"/><polyline points="6,18 10,15 14,18"/>
           </svg>
         </button>
-        <!-- Image upload button -->
-        <label class="input-icon-btn" title="Attach image" style="cursor:pointer;">
+        <label class="icon-btn" title="Attach image" style="cursor:pointer;">
           <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="4" width="16" height="13" rx="2"/>
             <circle cx="7" cy="9" r="1.5"/>
@@ -416,115 +330,73 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
     </div>
   </div>
 </div>
+</div>
 
-</div><!-- #app -->
-
-<!-- Lightbox -->
-<div id="lightbox" id="lightbox"><img id="lightbox-img" alt=""></div>
-<!-- Toast -->
+<div id="lightbox"><img id="lightbox-img" alt=""></div>
 <div id="toast"></div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<!-- Marked.js for markdown parsing -->
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
 <script type="module">
-// Firebase is now available globally as firebase
+const OR_KEY = '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';
+const OR_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const MODEL  = 'nvidia/nemotron-3-super-120b-a12b:free';
+const MAX_TOK = {fast:1200, thinking:6000};
 
-// ── Firebase config ──
-let fbCfg = null;
-try { if (window.opener && window.opener._SC_FB_CONFIG) fbCfg = window.opener._SC_FB_CONFIG; } catch(e) {}
-if (!fbCfg) fbCfg = {
-  apiKey: "AIzaSyArdhSWdKrDtg85eOczdvSOJJ5sb9F6Sw8",
-  authDomain: "epic-school-chat.firebaseapp.com",
-  projectId: "epic-school-chat",
-  storageBucket: "epic-school-chat.firebasestorage.app",
-  messagingSenderId: "906142370750",
-  appId: "1:906142370750:web:57a3e77bb6d6c7f34547ef"
+const SYS = {
+  fast:     'You are SchoolChat AI, a helpful school assistant. Help with homework, studying, essays, math and more. Be clear and concise. Use markdown when helpful. Do not reveal your underlying model name.',
+  thinking: 'You are SchoolChat AI (Thinking Mode), a helpful school assistant. Reason through problems carefully step by step. Help with homework, studying, essays, math and more. Use markdown when helpful. Do not reveal your underlying model name.'
 };
 
-// Declare Firebase variables in outer scope
-let fbApp, auth, db;
-
-// Initialize Firebase in async function
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
-(async () => {
-  fbApp = firebase.initializeApp(fbCfg, 'scai');
-  auth  = fbApp.auth();
-  await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-  db    = fbApp.firestore();
-
-const PROXY_URL = 'https://schoolchat-ai-proxy.hyperfrog7.workers.dev';
-const MODELS    = { fast:'google/gemini-2.0-flash-001', thinking:'nvidia/nemotron-nano-12b-v2-vl:free' };
-const MAX_TOKS  = { fast:1000, thinking:8000 };
-const THINKING_PROMPTS = {
-  default: "Think step-by-step to analyze this problem and plan your approach. Show your reasoning process.",
-  math: "Break down this math problem step by step. Show your thinking process and how you'll solve it.",
-  essay: "Analyze this essay request and plan your approach. Think about structure, main points, and examples.",
-  science: "Think through this science question methodically. Consider the concepts involved and your reasoning.",
-  general: "Think carefully about this question and plan your response step by step."
-};
 const SUGG = [
-  {e:'📝',l:'Help with an essay',p:'Can you help me write an essay about '},
-  {e:'🔢',l:'Solve a math problem',p:'Help me solve: '},
-  {e:'🧬',l:'Explain a concept',p:'Explain this in simple terms: '},
-  {e:'📖',l:'Summarize text',p:'Summarize this for me: '},
-  {e:'✏️',l:'Improve my writing',p:'Improve this writing: '},
-  {e:'🗺️',l:'Make a study plan',p:'Help me make a study plan for '},
+  {icon:'📝', label:'Help with an essay',   prompt:'Can you help me write an essay about '},
+  {icon:'🔢', label:'Solve a math problem', prompt:'Help me solve: '},
+  {icon:'🧬', label:'Explain a concept',    prompt:'Explain this in simple terms: '},
+  {icon:'📖', label:'Summarize text',       prompt:'Summarize this for me: '},
+  {icon:'✏️', label:'Improve my writing',   prompt:'Improve this writing: '},
+  {icon:'🗺️', label:'Make a study plan',    prompt:'Help me make a study plan for '},
 ];
 
-// ── State ──
-let user=null, hist=[], busy=false, sessions=[], curSess=null, unsubSess=null;
-let pendingImg=null; // {dataUrl, base64, mimeType, name, size}
+const FB_CFG = (() => {
+  try { if (window.opener?._SC_FB_CONFIG) return window.opener._SC_FB_CONFIG; } catch(e) {}
+  return {apiKey:'AIzaSyArdhSWdKrDtg85eOczdvSOJJ5sb9F6Sw8',authDomain:'epic-school-chat.firebaseapp.com',projectId:'epic-school-chat',storageBucket:'epic-school-chat.firebasestorage.app',messagingSenderId:'906142370750',appId:'1:906142370750:web:57a3e77bb6d6c7f34547ef'};
+})();
 
-// ── DOM ──
-const $  = id => document.getElementById(id);
-const authScr=$('auth-screen'), appEl=$('app');
-const authUserEl=$('auth-user'), authPassEl=$('auth-pass'), authBtn=$('auth-btn'), authErr=$('auth-err');
-const msgsInner=$('msgs-inner'), msgsEl=$('msgs');
-const inp=$('inp'), sendBtn=$('send-btn'), modelSel=$('model-select');
-const histList=$('history-list'), syncDot=$('sync-dot');
-const screenBtn=$('screen-btn');
-const imgUploadInput=$('img-upload'), charCount=$('char-count');
-const imgPreviewBar=$('img-preview-bar'), imgPreviewThumb=$('img-preview-thumb');
-const lightbox=$('lightbox'), lightboxImg=$('lightbox-img');
+const fbApp = firebase.initializeApp(FB_CFG, 'scai');
+const auth  = fbApp.auth();
+await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+const db    = fbApp.firestore();
 
-// ── Toast ──
-let _toastTimer=null;
-function toast(msg,dur=2200){
-  const t=$('toast'); t.textContent=msg; t.classList.add('show');
-  clearTimeout(_toastTimer); _toastTimer=setTimeout(()=>t.classList.remove('show'),dur);
-}
+let user=null, hist=[], busy=false, sessions=[], curSess=null, unsubSess=null, pendingImg=null, screenStream=null;
+
+const $ = id => document.getElementById(id);
+const msgsEl=$('msgs'), msgsInner=$('msgs-inner'), inp=$('inp'), sendBtn=$('send-btn'), modelSel=$('model-select');
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+let _toastTimer;
+function toast(msg,dur=2500){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.classList.remove('show'),dur);}
 
 // ── Auth ──
-function showErr(msg){authErr.textContent=msg;authErr.style.display='block';}
-authBtn.addEventListener('click', async ()=>{
-  const username=authUserEl.value.trim().toLowerCase(), pass=authPassEl.value;
-  if(!username||!pass) return showErr('Enter your username and password.');
-  authBtn.disabled=true; authErr.style.display='none';
+$('auth-btn').addEventListener('click', async () => {
+  const u=$('auth-user').value.trim().toLowerCase(), p=$('auth-pass').value, errEl=$('auth-err');
+  errEl.style.display='none';
+  if(!u||!p){errEl.textContent='Enter your username and password.';errEl.style.display='block';return;}
+  $('auth-btn').disabled=true; $('auth-btn').textContent='Signing in…';
   try {
-    await auth.signInWithEmailAndPassword(username+'@schoolchat.local', pass);
-    localStorage.setItem('sc_ai_username', username);
+    await auth.signInWithEmailAndPassword(u+'@schoolchat.local', p);
+    localStorage.setItem('sc_ai_u', u);
   } catch(e) {
-    const code=e.code||'';
-    showErr((code.includes('auth/')||code.includes('invalid')||code.includes('wrong'))?'Incorrect username or password.':'Login error: '+(e.message||'Unknown'));
-    authPassEl.value=''; authBtn.disabled=false; authPassEl.focus();
+    const c=e.code||'';
+    errEl.textContent=(c.includes('auth/')||c.includes('invalid')||c.includes('wrong'))?'Incorrect username or password.':'Error: '+(e.message||'Unknown');
+    errEl.style.display='block'; $('auth-pass').value=''; $('auth-btn').disabled=false; $('auth-btn').textContent='Sign in →'; $('auth-pass').focus();
   }
 });
-// Pre-fill saved username
-const savedUser=localStorage.getItem('sc_ai_username');
-if(savedUser){ authUserEl.value=savedUser; authPassEl.focus(); }
-[authUserEl,authPassEl].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')authBtn.click();}));
+const savedU=localStorage.getItem('sc_ai_u'); if(savedU){$('auth-user').value=savedU;$('auth-pass').focus();}
+[$('auth-user'),$('auth-pass')].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')$('auth-btn').click();}));
 
-// ── Auth state─
 auth.onAuthStateChanged(u=>{
   user=u;
   if(u){
-    authScr.style.display='none'; appEl.style.display='flex';
+    $('auth-screen').style.display='none'; $('app').style.display='flex';
     const nm=u.displayName||u.email.split('@')[0];
     $('user-name').textContent=nm; $('user-email').textContent='@'+u.email.replace('@schoolchat.local','');
     const av=$('user-av');
@@ -532,487 +404,174 @@ auth.onAuthStateChanged(u=>{
     else av.textContent=nm[0].toUpperCase();
     startSessListener(); buildChips($('chips'));
   } else {
-    authScr.style.display='flex'; appEl.style.display='none';
+    $('auth-screen').style.display='flex'; $('app').style.display='none';
   }
 });
- $('sign-out-btn').addEventListener('click', ()=>{ 
-  localStorage.removeItem('sc_ai_username'); 
-  localStorage.removeItem('sc_ai_currentSession');
-  auth.signOut(); 
-});
+$('sign-out-btn').addEventListener('click',()=>{localStorage.removeItem('sc_ai_u');localStorage.removeItem('sc_ai_s');auth.signOut();});
 
-// ── Session persistence ──
+// ── Sessions ──
 function startSessListener(){
   if(unsubSess) unsubSess();
-  const q=db.collection(`aiSessions/${user.uid}/sessions`).orderBy('updatedAt','desc');
-  unsubSess=q.onSnapshot(snap=>{
+  unsubSess=db.collection(`aiSessions/${user.uid}/sessions`).orderBy('updatedAt','desc').onSnapshot(snap=>{
     sessions=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderHistory();
-    // Restore current session if it exists
-    const savedSessionId=localStorage.getItem('sc_ai_currentSession');
-    if(savedSessionId && sessions.find(s=>s.id===savedSessionId)){
-      const currentSession=sessions.find(s=>s.id===savedSessionId);
-      if(currentSession.messages && currentSession.messages.length>0){
-        loadSess(currentSession);
-      }
-    } else if(!curSess && sessions.length>0 && !savedSessionId){
-      // Auto-load most recent session if no current session and no saved session
-      const mostRecent=sessions[0];
-      if(mostRecent.messages && mostRecent.messages.length>0){
-        loadSess(mostRecent);
-      }
-    }
-  }, err=>{ console.warn('Session listener error:', err.code, err.message); });
-  
-  // Load user memories
-  loadUserMemories();
-}
-
-// ── User Memories ──
-let userMemories = '';
-
-async function loadUserMemories(){
-  if(!user) return;
-  try {
-    const doc = await db.collection('userMemories').doc(user.uid).get();
-    if(doc.exists){
-      userMemories = doc.data().summary || '';
-      console.log('Loaded user memories:', userMemories);
-    }
-    // Refresh AI memories display if settings panel is open
-    if($('ai-settings-overlay').classList.contains('open')){
-      renderAIMemories();
-    }
-  } catch(e){
-    // Handle permission errors gracefully - userMemories collection might not exist yet
-    if(e.code === 'permission-denied' || e.message?.includes('Missing or insufficient permissions')){
-      console.log('User memories collection not accessible - will be created on first save');
-      userMemories = '';
-    } else {
-      console.warn('Error loading user memories:', e);
-    }
-  }
-}
-
-async function saveUserMemories(){
-  if(!user || !hist || hist.length < 2) return; // Need at least one conversation
-  
-  try {
-    // Generate memory summary from the conversation
-    const memoryPrompt = `Based on this conversation, write a 3-sentence summary of what you learned about the user. Include their name if mentioned, what they're studying, what they find difficult, their learning style, and any personal details. Keep it concise and factual.
-
-Conversation:
- ${hist.map(m => `${m.role}: ${typeof m.content === 'string' ? m.content : (m._text || m.content?.find?.(c => c.type === 'text')?.text || '')}`).join('\n')}`;
-    
-    const response = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'HTTP-Referer': location.href,
-        'X-Title': 'SchoolChat AI Memory'
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-001',
-        max_tokens: 200,
-        messages: [{
-          role: 'system',
-          content: 'You are an AI assistant helping to create concise user memory summaries. Write exactly 3 sentences focusing on key personal and academic information.'
-        }, {
-          role: 'user',
-          content: memoryPrompt
-        }]
-      })
-    });
-    
-    const data = await response.json();
-    const summary = data.choices?.[0]?.message?.content?.trim() || '';
-    
-    if(summary){
-      userMemories = summary;
-      try {
-        await db.collection('userMemories').doc(user.uid).set({
-          summary: summary,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        console.log('Saved user memories:', summary);
-      } catch(saveError){
-        if(saveError.code === 'permission-denied' || saveError.message?.includes('Missing or insufficient permissions')){
-          console.log('Cannot save user memories due to permissions - memories will be kept in session only');
-        } else {
-          console.warn('Error saving user memories:', saveError);
-        }
-      }
-    }
-  } catch(e){
-    console.warn('Error generating user memories:', e);
-  }
-}
-
-function getSystemPrompt(model){
-  const basePrompt = model === 'thinking' 
-    ? 'You are SchoolChat AI (Thinking Mode), a helpful school assistant. If asked what model or AI you are, say you are "SchoolChat AI (Thinking Mode)". Do not mention any underlying model names. Before answering, deeply reason through the problem step by step — consider multiple angles, check your logic, anticipate follow-up questions, and verify your answer before writing it. Prioritize depth, accuracy, and insight over speed. Help with homework, studying, concepts, essays, math, and more. Use markdown formatting when it helps.'
-    : 'You are SchoolChat AI (Fast Mode), a helpful school assistant. If asked what model or AI you are, say you are "SchoolChat AI (Fast Mode)". Do not mention any underlying model names. Help with homework, studying, concepts, essays, math, and more. Be clear and concise. Use markdown formatting when it helps.';
-    
-  // Add user memories to system prompt if available (for context only)
-  if(userMemories){
-    return `${basePrompt}
-
-User context for your reference: ${userMemories}
-
-IMPORTANT: Use the above context only to understand the user's level and topics. Do not proactively mention past conversations or greet them based on history. Only reference this information if they specifically ask about what they've been working on.`;
-  }
-  return basePrompt;
+    const saved=localStorage.getItem('sc_ai_s');
+    if(saved&&!curSess){const s=sessions.find(x=>x.id===saved);if(s?.messages?.length) loadSess(s);}
+  },err=>console.warn('sess:',err.message));
 }
 
 function renderHistory(){
-  histList.innerHTML='';
+  $('history-list').innerHTML='';
   sessions.forEach(s=>{
     const el=document.createElement('div'); el.className='hist-item'+(s.id===curSess?' active':'');
-    el.innerHTML=`<span class="hist-icon">💬</span><span class="hist-label">${esc(s.title||'Untitled')}</span><button class="hist-del" title="Delete">×</button>`;
-    el.addEventListener('click', e=>{ if(!e.target.classList.contains('hist-del')) loadSess(s); });
-    el.querySelector('.hist-del').addEventListener('click', e=>{ e.stopPropagation(); deleteSess(s.id); });
-    histList.appendChild(el);
+    el.innerHTML=`<span class="hist-icon">💬</span><span class="hist-label">${esc(s.title||'Untitled')}</span><button class="hist-del">×</button>`;
+    el.addEventListener('click',e=>{if(!e.target.classList.contains('hist-del')) loadSess(s);});
+    el.querySelector('.hist-del').addEventListener('click',e=>{e.stopPropagation();deleteSess(s.id);});
+    $('history-list').appendChild(el);
   });
 }
 
 async function saveSess(firstMsg){
   if(!user) return;
-  syncDot.className='sync-dot syncing';
+  $('sync-dot').className='sync-dot syncing';
   try {
-    const title=firstMsg?.slice(0,40)||(hist[0]?._text?.slice(0,40)||hist[0]?.content?.slice(0,40)||'Chat');
+    const title=(firstMsg||'').slice(0,45)||hist[0]?._text?.slice(0,45)||'Chat';
     const path=`aiSessions/${user.uid}/sessions`;
-    
-    // Clean the history data to remove undefined values
-    const cleanHist = hist.map(msg => {
-      const cleanMsg = { role: msg.role };
-      if (msg.content !== undefined) cleanMsg.content = msg.content;
-      if (msg._text !== undefined) cleanMsg._text = msg._text;
-      if (msg._imgUrl !== undefined) cleanMsg._imgUrl = msg._imgUrl;
-      return cleanMsg;
-    });
-    
-    if(curSess){
-      await db.doc(path+'/'+curSess).set({title,messages:cleanHist,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    } else {
-      // Only create new session if we have messages to save
-      if(cleanHist && cleanHist.length > 0){
-        const ref=await db.collection(path).add({title,messages:cleanHist,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-        curSess=ref.id;
-        // Save new session ID to localStorage
-        localStorage.setItem('sc_ai_currentSession', curSess);
-      }
-    }
-    syncDot.className='sync-dot synced';
-  } catch(e){ 
-    console.error('Save session error:', e);
-    syncDot.className='sync-dot'; 
-  }
+    const clean=hist.map(m=>{const o={role:m.role};if(m.content!==undefined)o.content=m.content;if(m._text!==undefined)o._text=m._text;if(m._imgUrl!==undefined)o._imgUrl=m._imgUrl;return o;});
+    if(curSess){await db.doc(path+'/'+curSess).set({title,messages:clean,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}
+    else if(clean.length>0){const ref=await db.collection(path).add({title,messages:clean,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});curSess=ref.id;localStorage.setItem('sc_ai_s',curSess);}
+    $('sync-dot').className='sync-dot synced';
+  } catch(e){console.error('save:',e);$('sync-dot').className='sync-dot';}
 }
 
 async function loadSess(s){
   curSess=s.id; hist=s.messages||[];
-  // Save current session to localStorage
-  localStorage.setItem('sc_ai_currentSession', curSess);
-  msgsInner.innerHTML=''; $('welcome')&&$('welcome').remove();
+  localStorage.setItem('sc_ai_s',curSess);
+  msgsInner.innerHTML='';
   hist.forEach(m=>{
     if(m.role==='user'){
-      // render user message — may have image
-      if(m._imgUrl){
-        const row=mkRow('user',true);
-        const col=document.createElement('div'); col.className='msg-col';
-        const img=document.createElement('img'); img.className='msg-img'; img.src=m._imgUrl; img.alt=''; img.onclick=()=>openLightbox(m._imgUrl);
-        col.appendChild(img);
-        if(m._text){const bub=mkBub('user',m._text);col.appendChild(bub);}
-        addActions(row,col,m._text||'',false);
-        row.append(mkAv('user'),col); msgsInner.appendChild(row);
-      } else {
-        const content=typeof m.content==='string'?m.content:(m.content?.find?.(c=>c.type==='text')?.text||'');
-        addMsg('user',content,true);
-      }
-    } else if(m.role==='assistant'){
-      addMsg('ai',typeof m.content==='string'?m.content:'',true);
-    }
+      if(m._imgUrl){const row=mkRow('user',true),col=mkCol();const img=document.createElement('img');img.className='msg-img';img.src=m._imgUrl;img.onclick=()=>openLB(m._imgUrl);col.appendChild(img);if(m._text){const b=mkBub('user');b.textContent=m._text;col.appendChild(b);}addActs(col,m._text||'',false);row.append(mkAv('user'),col);msgsInner.appendChild(row);}
+      else{const c=typeof m.content==='string'?m.content:(m.content?.find?.(x=>x.type==='text')?.text||'');addMsg('user',c,true);}
+    } else if(m.role==='assistant'){addMsg('ai',typeof m.content==='string'?m.content:'',true);}
   });
-  msgsEl.scrollTop=msgsEl.scrollHeight;
-  renderHistory();
+  msgsEl.scrollTop=msgsEl.scrollHeight; renderHistory();
 }
 
 function newChat(){
-  createNewSession();
-  hist=[]; pendingImg=null;
-  clearImgPreview();
-  msgsInner.innerHTML='';
-  msgsInner.innerHTML=`<div id="welcome"><div class="welcome-icon">✦</div><h3>SchoolChat AI</h3><p>Ask me anything — homework help, essay feedback, math, science, or just thinking out loud.</p><div class="chips" id="chips"></div></div>`;
-  buildChips($('chips'));
-  renderHistory();
-  // Load user memories for new chat
-  if(userMemories){
-    console.log('Starting new chat with user memories:', userMemories);
-  }
+  curSess=null;hist=[];pendingImg=null;localStorage.removeItem('sc_ai_s');clearImg();
+  msgsInner.innerHTML=`<div id="welcome"><div class="welcome-icon">✦</div><h2>SchoolChat AI</h2><p>Ask me anything — homework help, essay feedback, math, science, or just thinking out loud.</p><div class="chips" id="chips"></div></div>`;
+  buildChips($('chips')); renderHistory();
 }
+async function deleteSess(id){await db.doc(`aiSessions/${user.uid}/sessions/${id}`).delete().catch(()=>{});if(curSess===id) newChat();}
 
-function createNewSession(){
-  curSess=null; // Reset current session to trigger new session creation on next message
-  // Clear saved session from localStorage
-  localStorage.removeItem('sc_ai_currentSession');
-}
-
-async function deleteSess(id){
-  await db.doc(`aiSessions/${user.uid}/sessions/${id}`).delete().catch(()=>{});
-  // Also delete user memories if this was the current session
-  if(curSess===id){
-    // Clear user memories from Firebase
-    try {
-      await db.collection('userMemories').doc(user.uid).delete();
-      userMemories = '';
-      console.log('Deleted user memories associated with deleted chat');
-    } catch(e){
-      console.warn('Error deleting user memories:', e);
-    }
-    newChat();
-  }
-}
-
-function showToast(msg, duration=3000){
-  const toast = $('toast');
-  if(!toast) return;
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), duration);
-}
-
-async function deleteAllChats(){
-  if(!user) return;
-  
-  // Confirm deletion
-  const confirmed = confirm('Are you sure you want to delete all chats and clear your memories? This cannot be undone.');
-  if(!confirmed) return;
-  
-  try {
-    // Delete all chat sessions
-    const sessionsSnapshot = await db.collection(`aiSessions/${user.uid}/sessions`).get();
-    const deletePromises = sessionsSnapshot.docs.map(doc => doc.ref.delete());
-    await Promise.all(deletePromises);
-    
-    // Clear user memories
-    await db.collection('userMemories').doc(user.uid).delete();
-    userMemories = '';
-    
-    // Clear local storage
-    localStorage.removeItem('sc_ai_currentSession');
-    
-    // Reset UI
-    sessions = [];
-    curSess = null;
-    hist = [];
-    
-    // Show welcome screen
-    msgsInner.innerHTML = '';
-    msgsInner.innerHTML = `<div id="welcome"><div class="welcome-icon">✦</div><h3>SchoolChat AI</h3><p>Ask me anything — homework help, essay feedback, math, science, or just thinking out loud.</p><div class="chips" id="chips"></div></div>`;
-    buildChips($('chips'));
-    renderHistory();
-    
-    showToast('All chats and memories deleted');
-    console.log('All chats and memories deleted successfully');
-  } catch(e){
-    console.error('Error deleting all chats:', e);
-    showToast('Error deleting chats');
-  }
-}
-
-function buildChips(container){
-  if(!container) return;
-  SUGG.forEach(s=>{
-    const c=document.createElement('button'); c.className='chip'; c.textContent=s.e+' '+s.l;
-    c.addEventListener('click',()=>{ inp.value=s.p; inp.focus(); resize(); });
-    container.appendChild(c);
-  });
+function buildChips(c){
+  if(!c) return;
+  SUGG.forEach(s=>{const b=document.createElement('button');b.className='chip';b.innerHTML=`<span class="chip-icon">${s.icon}</span><span class="chip-label">${s.label}</span>`;b.addEventListener('click',()=>{inp.value=s.prompt;inp.focus();resize();});c.appendChild(b);});
 }
 
 // ── Image upload ──
-imgUploadInput.addEventListener('change', ()=>{
-  const file=imgUploadInput.files[0]; if(!file) return;
+$('img-upload').addEventListener('change',()=>{
+  const file=$('img-upload').files[0];if(!file) return;
   if(file.size>8*1024*1024){toast('⚠️ Image must be under 8MB');return;}
   const reader=new FileReader();
-  reader.onload=e=>{
-    pendingImg={dataUrl:e.target.result, base64:e.target.result.split(',')[1], mimeType:file.type, name:file.name, size:file.size};
-    imgPreviewThumb.src=pendingImg.dataUrl;
-    $('img-preview-name').textContent=file.name;
-    $('img-preview-size').textContent=(file.size/1024).toFixed(0)+' KB';
-    imgPreviewBar.classList.add('on');
-  };
-  reader.readAsDataURL(file);
-  imgUploadInput.value='';
+  reader.onload=e=>{pendingImg={dataUrl:e.target.result,base64:e.target.result.split(',')[1],mimeType:file.type,name:file.name,size:file.size};$('img-thumb').src=pendingImg.dataUrl;$('img-name').textContent=file.name;$('img-size').textContent=(file.size/1024).toFixed(0)+' KB';$('img-preview-bar').classList.add('on');};
+  reader.readAsDataURL(file); $('img-upload').value='';
 });
-
-function clearImgPreview(){ pendingImg=null; imgPreviewBar.classList.remove('on'); imgPreviewThumb.src=''; }
- $('img-preview-clear').addEventListener('click', clearImgPreview);
+function clearImg(){pendingImg=null;$('img-preview-bar').classList.remove('on');$('img-thumb').src='';}
+$('img-clear').addEventListener('click',clearImg);
 
 // ── Lightbox ──
-function openLightbox(src){ lightboxImg.src=src; lightbox.classList.add('on'); }
-lightbox.addEventListener('click', ()=>lightbox.classList.remove('on'));
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') lightbox.classList.remove('on'); });
+function openLB(src){$('lightbox-img').src=src;$('lightbox').classList.add('on');}
+$('lightbox').addEventListener('click',()=>$('lightbox').classList.remove('on'));
+document.addEventListener('keydown',e=>{if(e.key==='Escape') $('lightbox').classList.remove('on');});
 
-// ── Screen share (popup window approach) ──
-let _scWin = null;
-
-screenBtn.addEventListener('click', async ()=>{
-  if(_scWin && !_scWin.closed) { _scWin.focus(); return; }
-
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getDisplayMedia({video:{cursor:'always',frameRate:5},audio:false});
-  } catch(e) {
-    if(e.name !== 'NotAllowedError') toast('Screen share failed: ' + e.message);
-    return;
-  }
-
-  const cs = getComputedStyle(document.documentElement);
-  const vars = ['--bg','--surface','--surface2','--surface3','--border','--text','--muted','--muted2','--accent','--accent2','--accent-dim','--green','--bubble-self']
-    .map(v => v + ':' + cs.getPropertyValue(v).trim()).join(';');
-
-  const currentModel = modelSel.value;
-  
-  const html = [
-    '<!DOCTYPE html><html><head><meta charset="utf-8">',
-    '<title>SchoolChat AI</title>',
-    '<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Syne:wght@700&display=swap" rel="stylesheet">',
-    '<style>',
-    ':root{' + vars + '}',
-    '*{box-sizing:border-box;margin:0;padding:0;}',
-    'body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:14px;}',
-    '#hdr{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--surface);border-bottom:1px solid var(--border);}',
-    '.logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#7c5cff);display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;}',
-    '#ttl{font-family:"Syne",sans-serif;font-weight:700;font-size:.88rem;}',
-    '.model-wrap{position:relative;display:inline-block;margin-left:4px;}',
-    '#modelsel{font-size:.68rem;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:20px;outline:none;cursor:pointer;font-family:"DM Sans",sans-serif;padding:2px 18px 2px 6px;appearance:none;-webkit-appearance:none;}',
-    '.model-arrow{pointer-events:none;position:absolute;right:5px;top:50%;transform:translateY(-50%);font-size:.5rem;color:var(--muted);}',
-    '.ldot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:lp 1.4s infinite;margin-left:auto;}',
-    '.llbl{font-size:.63rem;font-weight:700;color:#22c55e;letter-spacing:.5px;margin-left:3px;}',
-    '#stopbtn{background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:.7rem;padding:3px 9px;border-radius:6px;margin-left:8px;}',
-    '#stopbtn:hover{color:#ff5f7e;border-color:#ff5f7e;}',
-    '#msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}',
-    '.msg{display:flex;gap:8px;align-items:flex-start;animation:pop .18s ease both;}',
-    '.msg.user{flex-direction:row-reverse;}',
-    '.av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;font-weight:700;background:linear-gradient(135deg,var(--accent),#7c5cff);}',
-    '.av.u{background:var(--surface3);}',
-    '.bub{max-width:82%;padding:8px 11px;border-radius:12px;font-size:.84rem;line-height:1.55;word-break:break-word;}',
-    '.msg.user .bub{background:var(--bubble-self);border-bottom-right-radius:3px;}',
-    '.msg.ai .bub{background:var(--surface2);border:1px solid var(--border);border-bottom-left-radius:3px;}',
-    '.dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite;margin:0 2px;}',
-    '.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:8px;text-align:center;padding:24px;}',
-    '.eicon{font-size:2rem;}',
-    '.empty h2{font-size:.95rem;margin:0;}',
-    '.empty p{font-size:.76rem;color:var(--muted);max-width:200px;line-height:1.5;margin:0;}',
-    '#ibar{padding:9px 11px 10px;border-top:1px solid var(--border);background:var(--surface);}',
-    '#iwrap{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:6px 6px 6px 11px;}',
-    '#inp{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:"DM Sans",sans-serif;font-size:.85rem;resize:none;max-height:80px;line-height:1.5;}',
-    '#snd{width:30px;height:30px;border-radius:8px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}',
-    '@keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}',
-    '@keyframes blink{0%,80%,100%{opacity:0}40%{opacity:1}}',
-    '@keyframes lp{0%,100%{opacity:1}50%{opacity:.3;transform:scale(.6)}}',
-    '</style></head><body>',
-    '<div id="hdr"><div class="logo">&#x2726;</div><span id="ttl">SchoolChat AI</span>',
-    '<div class="model-wrap"><select id="modelsel">',
-    '<option value="fast"' + (currentModel==='fast'?' selected':'') + '>&#x26A1; Fast</option>',
-    '<option value="thinking"' + (currentModel==='thinking'?' selected':'') + '>&#x1F9E0; Thinking</option>',
-    '</select><span class="model-arrow">&#x25BC;</span></div>',
-    '<div style="display:flex;align-items:center;margin-left:auto"><div class="ldot"></div><span class="llbl">LIVE</span></div>',
-    '<button id="stopbtn">&#x25a0; Stop</button></div>',
-    '<div id="msgs"></div>',
-    '<div id="ibar"><div id="iwrap">',
-    '<textarea id="inp" placeholder="Ask about your screen\u2026" rows="1"></textarea>',
-    '<button id="snd"><svg viewBox="0 0 24 24" width="13" height="13" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>',
-    '</div></div>',
-    '<scr'+'ipt>',
-    'var PROXY_URL=' + JSON.stringify(PROXY_URL) + ';',
-    'var hist=[],busy=false,msgsEl=document.getElementById("msgs"),inp=document.getElementById("inp"),snd=document.getElementById("snd"),modelsel=document.getElementById("modelsel");',
-    'var vid=document.createElement("video");vid.autoplay=true;vid.muted=true;vid.playsInline=true;vid.style.cssText="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0.01;pointer-events:none;";document.body.appendChild(vid);var _vidReady=false;vid.addEventListener("playing",function(){_vidReady=true;});',
-    'inp.addEventListener("input",function(){inp.style.height="auto";inp.style.height=Math.min(inp.scrollHeight,80)+"px";});',
-    'inp.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();doSend();}});',
-    'snd.addEventListener("click",doSend);',
-    'document.getElementById("stopbtn").addEventListener("click",function(){window.close();});',
-    'window.attachStream=function(ms){vid.srcObject=ms;ms.getVideoTracks()[0].addEventListener("ended",function(){window.close();});};',
-    'window.grabFrame=function(){if(!vid.srcObject||!vid.videoWidth||!_vidReady)return null;try{var c=document.createElement("canvas");var sc=Math.min(1,1280/vid.videoWidth);c.width=Math.round(vid.videoWidth*sc);c.height=Math.round(vid.videoHeight*sc);var ctx=c.getContext("2d");ctx.drawImage(vid,0,0,c.width,c.height);return c.toDataURL("image/jpeg",.85).split(",")[1];}catch(e){return null;}};',
-    'function showEmpty(){msgsEl.innerHTML="";var el=document.createElement("div");el.className="empty";el.innerHTML="<div class=\'eicon\'>&#x2726;</div><h2>SchoolChat AI</h2><p>Screen sharing active.</p>";msgsEl.appendChild(el);}',
-    'showEmpty();',
-    'async function doSend(){var text=inp.value.trim();if(!text||busy)return;var em=document.querySelector(".empty");if(em)em.remove();inp.value="";inp.style.height="auto";addMsg("user",text);var model=modelsel.value;var modelId=model==="thinking"?"nvidia/nemotron-nano-12b-v2-vl:free":"google/gemini-2.0-flash-001";var maxTok=model==="thinking"?8000:1000;var thinkEl=addThink(model);busy=true;snd.disabled=true;hist.push({role:"user",content:text});if(hist.length>20)hist=hist.slice(-20);var frame=window.grabFrame();if(!frame&&vid.srcObject&&vid.videoWidth){await new Promise(function(r){setTimeout(r,400);});frame=window.grabFrame();}var uc=frame?[{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+frame}},{type:"text",text:text}]:text;var sys=model==="thinking"?"You are SchoolChat AI (Thinking Mode). Think step by step.":"You are SchoolChat AI (Fast Mode). Help concisely.";var msgs=[{role:"system",content:sys}].concat(hist.slice(0,-1)).concat([{role:"user",content:uc}]);try{var r=await fetch(PROXY_URL,{method:"POST",headers:{"Content-Type":"application/json","HTTP-Referer":location.href,"X-Title":"SchoolChat AI"},body:JSON.stringify({model:modelId,max_tokens:maxTok,stream:false,messages:msgs})});var data=await r.json();if(!r.ok)throw new Error(data.error&&data.error.message||"HTTP "+r.status);var full=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||"").replace(/<think>[\s\S]*?<\/think>/gi,"").trim();if(!full)throw new Error("Empty response.");thinkEl.remove();addMsg("ai",full);hist.push({role:"assistant",content:full});}catch(e){thinkEl.remove();hist.pop();var em=e.message||"Error";addMsg("ai",em.includes("429")?"Rate limited.":"Error: "+em);}busy=false;snd.disabled=false;msgsEl.scrollTop=9999;inp.focus();}',
-    'function addMsg(role,text){var wrap=document.createElement("div");wrap.className="msg "+role;var av=document.createElement("div");av.className="av"+(role==="user"?" u":"");av.textContent=role==="user"?"\ud83d\udc64":"\u2726";var bub=document.createElement("div");bub.className="bub";bub.innerHTML=text;wrap.appendChild(av);wrap.appendChild(bub);msgsEl.appendChild(wrap);return wrap;}',
-    'function addThink(model){var wrap=document.createElement("div");wrap.className="msg ai";var av=document.createElement("div");av.className="av";av.textContent="\u2726";var bub=document.createElement("div");bub.className="bub";bub.innerHTML=(model==="thinking"?"<div class=\'think-lbl\'>\uD83E\uDDE0 Thinking\u2026</div>":"")+"<div class=\'dots\'><span></span><span></span><span></span></div>";wrap.appendChild(av);wrap.appendChild(bub);msgsEl.appendChild(wrap);return wrap;}',
-    '<\/script>',
-    '</body></html>'
-  ].join('\n');
-
-  _scWin = window.open('about:blank', 'sc-screen', 'width=420,height=620,resizable=yes,toolbar=no,menubar=no,location=no,status=no,scrollbars=no');
-  if(!_scWin) {
-    stream.getTracks().forEach(t=>t.stop());
-    toast('Allow popups to use screen share');
-    return;
-  }
-  _scWin.document.open();
-  _scWin.document.write(html);
-  _scWin.document.close();
-
-  const tryAttach = (attempts) => {
-    if(!_scWin || _scWin.closed) return;
-    if(typeof _scWin.attachStream === 'function') {
-      _scWin.attachStream(stream);
-    } else if(attempts > 0) {
-      setTimeout(()=>tryAttach(attempts-1), 150);
-    }
-  };
-  setTimeout(()=>tryAttach(20), 300);
-
-  stream.getVideoTracks()[0].addEventListener('ended', ()=>{
-    if(_scWin && !_scWin.closed) _scWin.close();
-  });
-
-  screenBtn.classList.add('on');
-
-  const pollTimer = setInterval(()=>{
-    if(!_scWin || _scWin.closed) {
-      clearInterval(pollTimer);
-      _scWin = null;
-      stream.getTracks().forEach(t=>t.stop());
-      screenBtn.classList.remove('on');
-    }
-  }, 800);
+// ── Screen share ──
+$('screen-btn').addEventListener('click',async()=>{
+  if(screenStream){stopScreen();return;}
+  try{screenStream=await navigator.mediaDevices.getDisplayMedia({video:{cursor:'always',frameRate:5},audio:false});}
+  catch(e){if(e.name!=='NotAllowedError') toast('Screen share failed: '+e.message);return;}
+  $('screen-bar').classList.add('on'); $('screen-btn').classList.add('on');
+  const sv=$('sv'); sv.srcObject=screenStream;
+  screenStream.getVideoTracks()[0].addEventListener('ended',stopScreen);
 });
-function stopScreen(){ if(_scWin && !_scWin.closed) _scWin.close(); }
- $('screen-stop').addEventListener('click', stopScreen);
+function stopScreen(){screenStream?.getTracks().forEach(t=>t.stop());screenStream=null;$('screen-bar').classList.remove('on');$('screen-btn').classList.remove('on');}
+$('screen-stop').addEventListener('click',stopScreen);
+
+function grabFrame(){
+  if(!screenStream) return null;
+  const sv=$('sv'); if(!sv.videoWidth) return null;
+  try{const c=document.createElement('canvas');const sc=Math.min(1,1280/sv.videoWidth);c.width=Math.round(sv.videoWidth*sc);c.height=Math.round(sv.videoHeight*sc);c.getContext('2d').drawImage(sv,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.85).split(',')[1];}catch(e){return null;}
+}
 
 // ── Char count ──
-inp.addEventListener('input',()=>{
-  resize();
-  const len=inp.value.length;
-  if(len===0){charCount.textContent='';return;}
-  charCount.textContent=len+'/4000';
-  charCount.className=len>3500?'over':len>3000?'warn':'';
-});
+inp.addEventListener('input',()=>{resize();const len=inp.value.length;$('char-count').textContent=len?len+'/4000':'';$('char-count').className=len>3500?'over':len>3000?'warn':'';});
 
-// ── fetch with auto-retry on 429 ──
-async function fetchAI(body, thinkEl, retries=3, delay=8000){
-  for(let attempt=0; attempt<=retries; attempt++){
-    const r=await fetch(PROXY_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','HTTP-Referer':location.href,'X-Title':'SchoolChat AI'},
-      body:JSON.stringify(body)
+// ── UI helpers ──
+function mkRow(cls,noAnim=false){const d=document.createElement('div');d.className='ai-msg '+cls;if(noAnim)d.style.animation='none';return d;}
+function mkCol(){const d=document.createElement('div');d.className='msg-col';return d;}
+function mkBub(role){const d=document.createElement('div');d.className='ai-bubble';return d;}
+function mkAv(role){
+  const d=document.createElement('div');
+  if(role==='user'){d.className='ai-av usr';if(user?.photoURL)d.innerHTML=`<img src="${encodeURI(user.photoURL)}" alt="">`;else d.textContent=user?(user.displayName||user.email)[0].toUpperCase():'👤';}
+  else{d.className='ai-av bot';d.textContent='✦';}
+  return d;
+}
+function addMsg(role,text,noAnim=false){
+  const row=mkRow(role,noAnim),col=mkCol(),bub=mkBub(role);
+  if(role==='ai') bub.innerHTML=fmt(text); else bub.textContent=text;
+  col.appendChild(bub);
+  if(role==='ai') addActs(col,text,true);
+  row.append(mkAv(role),col); msgsInner.appendChild(row); msgsEl.scrollTop=msgsEl.scrollHeight;
+  return {row,col,bub};
+}
+function addActs(col,text,isAI){
+  const acts=document.createElement('div');acts.className='msg-actions';
+  const cp=document.createElement('button');cp.className='mact';cp.textContent='Copy';
+  cp.addEventListener('click',()=>{navigator.clipboard.writeText(text||'').then(()=>{cp.textContent='✓ Copied';cp.classList.add('copied');setTimeout(()=>{cp.textContent='Copy';cp.classList.remove('copied');},2000);}).catch(()=>toast('Could not copy'));});
+  acts.appendChild(cp);
+  if(isAI){const rb=document.createElement('button');rb.className='mact';rb.textContent='↻ Retry';rb.addEventListener('click',regenerate);acts.appendChild(rb);}
+  col.appendChild(acts);
+}
+
+// ── Markdown ──
+function fmt(raw){
+  if(!raw) return '';
+  try{
+    const html=marked.parse(raw);
+    return html.replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/g,(_,code)=>{
+      const e2=code.replace(/'/g,"\\'").replace(/\n/g,'\\n');
+      return `<pre><button class="pre-copy" onclick="copyCode(this,'${e2}')">Copy</button><code>${code}</code></pre>`;
     });
-    if(r.status===429){
-      if(attempt===retries) throw new Error('rate_limit');
-      let secs=Math.round(delay/1000);
-      const thinkBub=thinkEl?.querySelector('.ai-bubble');
-      const tick=setInterval(()=>{
-        secs--;
-        if(thinkBub) thinkBub.innerHTML=`<div class="think-label">⏳ Rate limited — retrying in ${secs}s…</div><div class="ai-typing-dot"><span></span><span></span><span></span></div>`;
-      },1000);
-      await new Promise(res=>setTimeout(res,delay));
-      clearInterval(tick);
-      if(thinkBub) thinkBub.innerHTML='<div class="think-label">🧠 Thinking…</div><div class="ai-typing-dot"><span></span><span></span><span></span></div>';
-      delay=Math.min(delay*2, 30000);
-      continue;
-    }
+  } catch(e){return esc(raw);}
+}
+window.copyCode=(btn,code)=>{navigator.clipboard.writeText(code.replace(/\\n/g,'\n')).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='Copy',2000);}).catch(()=>{});};
+
+// ── Fetch with retry ──
+async function fetchAI(messages,retries=3,delay=6000){
+  const model=modelSel.value;
+  for(let attempt=0;attempt<=retries;attempt++){
+    const r=await fetch(OR_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+OR_KEY,'HTTP-Referer':location.href,'X-Title':'SchoolChat AI'},
+      body:JSON.stringify({model:MODEL,max_tokens:MAX_TOK[model],stream:true,messages})
+    });
+    if(r.status===429){if(attempt===retries) throw new Error('rate_limit');await new Promise(res=>setTimeout(res,delay));delay=Math.min(delay*2,30000);continue;}
     return r;
+  }
+}
+
+// ── Stream helper ──
+async function streamInto(r, onDelta){
+  const reader=r.body.getReader(), dec=new TextDecoder();
+  let buf='';
+  while(true){
+    const {done,value}=await reader.read(); if(done) break;
+    buf+=dec.decode(value,{stream:true});
+    const lines=buf.split('\n'); buf=lines.pop();
+    for(const line of lines){
+      const t=line.trim(); if(!t||t==='data: [DONE]'||!t.startsWith('data: ')) continue;
+      try{const delta=JSON.parse(t.slice(6)).choices?.[0]?.delta?.content||'';if(delta) onDelta(delta);}catch(e){}
+    }
   }
 }
 
@@ -1020,944 +579,149 @@ async function fetchAI(body, thinkEl, retries=3, delay=8000){
 async function send(){
   const text=inp.value.trim();
   if((!text&&!pendingImg)||busy) return;
-  const img=pendingImg;
-  inp.value=''; resize(); charCount.textContent='';
-  clearImgPreview();
-  document.getElementById('welcome')?.remove();
+  const img=pendingImg, model=modelSel.value;
+  inp.value=''; resize(); $('char-count').textContent=''; clearImg();
+  $('welcome')?.remove();
 
-  // Show user message
-  const userRow=mkRow('user');
-  const userCol=document.createElement('div'); userCol.className='msg-col';
-  if(img){
-    const imgEl=document.createElement('img'); imgEl.className='msg-img'; imgEl.src=img.dataUrl; imgEl.alt=''; imgEl.onclick=()=>openLightbox(img.dataUrl);
-    userCol.appendChild(imgEl);
-  }
-  if(text){const bub=mkBub('user',text);userCol.appendChild(bub);}
-  addActions(userRow,userCol,text,false);
-  userRow.append(mkAv('user'),userCol); msgsInner.appendChild(userRow); msgsEl.scrollTop=msgsEl.scrollHeight;
+  // User bubble
+  const uRow=mkRow('user'), uCol=mkCol();
+  if(img){const ie=document.createElement('img');ie.className='msg-img';ie.src=img.dataUrl;ie.onclick=()=>openLB(img.dataUrl);uCol.appendChild(ie);}
+  if(text){const ub=mkBub('user');ub.textContent=text;uCol.appendChild(ub);}
+  addActs(uCol,text,false); uRow.append(mkAv('user'),uCol); msgsInner.appendChild(uRow); msgsEl.scrollTop=msgsEl.scrollHeight;
 
-  // Build history entry
+  // Build content
+  const frame=grabFrame();
   let userContent;
-  if(img){
-    userContent=[{type:'image_url',image_url:{url:'data:'+img.mimeType+';base64,'+img.base64}},{type:'text',text:text||'What do you see in this image?'}];
-  } else {
-    userContent=text;
-  }
+  if(img) userContent=[{type:'image_url',image_url:{url:'data:'+img.mimeType+';base64,'+img.base64}},{type:'text',text:text||'What do you see?'}];
+  else if(frame) userContent=[{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+frame}},{type:'text',text:text||'What do you see on my screen?'}];
+  else userContent=text;
 
   hist.push({role:'user',content:userContent,_text:text,_imgUrl:img?.dataUrl});
   if(hist.length>24) hist=hist.slice(-24);
 
-  const thinkEl=addThinking();
   busy=true; sendBtn.disabled=true;
 
-  const model=modelSel.value;
-  const sys=getSystemPrompt(model);
-  const _histLimit=aiSettings.historyLimit||24;
-  
-  // For thinking mode, modify the system prompt to include internal monologue
-  let finalSystemPrompt = sys;
-  let finalUserContent = userContent;
-  
-  if(model === 'thinking'){
-    const questionType = detectQuestionType(text);
-    const thinkingPrompt = THINKING_PROMPTS[questionType];
-    finalSystemPrompt = `${sys}\n\n${thinkingPrompt}`;
-    
-    // For thinking mode, we want the AI to think about the question first
-    if(typeof userContent === 'string'){
-      finalUserContent = 'Question: '+userContent+'\n\nThink step-by-step about this question. Show your reasoning process.';
-    }
-  }
-  
-  const msgs=[{role:'system',content:finalSystemPrompt},...hist.slice(0,-1).slice(-_histLimit+1).map(m=>({role:m.role,content:m.content})),{role:'user',content:finalUserContent}];
+  // Thinking indicator
+  const tRow=mkRow('ai'), tCol=mkCol(), tBub=mkBub('ai');
+  tBub.innerHTML=(model==='thinking'?'<div style="font-size:.7rem;font-weight:700;color:var(--accent);letter-spacing:.3px;margin-bottom:5px;text-transform:uppercase;">🧠 Thinking…</div>':'')+'<div class="ai-typing-dot"><span></span><span></span><span></span></div>';
+  tCol.appendChild(tBub); tRow.append(mkAv('ai'),tCol); msgsInner.appendChild(tRow); msgsEl.scrollTop=msgsEl.scrollHeight;
+
+  const msgs=[{role:'system',content:SYS[model]},...hist.slice(0,-1).map(m=>({role:m.role,content:m.content})),{role:'user',content:userContent}];
 
   try {
-    const useStream = (model==='fast' || model==='thinking') && (aiSettings.stream !== false);
-    const _temp = aiSettings.temperature ?? 1.0;
-    const body={model:MODELS[model],max_tokens:MAX_TOKS[model],stream:useStream,temperature:_temp,messages:msgs};
-    const r=await fetchAI(body, thinkEl);
+    const r=await fetchAI(msgs);
     if(!r) throw new Error('rate_limit');
     if(!r.ok){const d=await r.json();throw new Error(d.error?.message||'HTTP '+r.status);}
-    
-    // Smoothly remove thinking bubble before showing response
-    removeThinking(thinkEl, () => {
-      // Continue with response after thinking bubble fades out
-      processAIResponse(r, model, useStream);
-    });
-    
-    return; // Exit early, processAIResponse handles the rest
-  } catch(e){
-    if(e.name!=='AbortError'){
-      thinkEl?.remove(); hist.pop();
-      const m=e.message||'Unknown error';
-      addMsg('ai',m==='rate_limit'||m.includes('429')||m.includes('rate')
-        ?'⏳ Still rate limited after retries — please wait a minute and try again, or switch to ⚡ Fast mode.'
-        :'⚠️ '+m);
+
+    tRow.remove();
+
+    // Build response UI
+    const aRow=mkRow('ai'), aCol=mkCol();
+    let thinkContent=null, answerBub=null, mainBub=null;
+
+    if(model==='thinking'){
+      // Think box (collapsible)
+      const tb=document.createElement('div'); tb.className='think-box';
+      const tbh=document.createElement('div'); tbh.className='think-box-hdr';
+      const tbl=document.createElement('div'); tbl.className='think-box-lbl';
+      tbl.innerHTML='<svg width="9" height="9" viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Thought Process';
+      const tbt=document.createElement('button'); tbt.className='think-box-toggle'; tbt.textContent='Hide';
+      let tbc_collapsed=false;
+      tbt.addEventListener('click',()=>{tbc_collapsed=!tbc_collapsed;tbc.classList.toggle('collapsed',tbc_collapsed);tbt.textContent=tbc_collapsed?'Show':'Hide';});
+      tbh.append(tbl,tbt);
+      const tbc=document.createElement('div'); tbc.className='think-box-content';
+      tb.append(tbh,tbc); aCol.appendChild(tb);
+      thinkContent=tbc;
+      answerBub=mkBub('ai'); aCol.appendChild(answerBub);
+    } else {
+      mainBub=mkBub('ai'); aCol.appendChild(mainBub);
     }
-  } finally { busy=false; sendBtn.disabled=false; msgsEl.scrollTop=msgsEl.scrollHeight; inp.focus(); }
+
+    aRow.append(mkAv('ai'),aCol); msgsInner.appendChild(aRow);
+
+    let full='';
+    await streamInto(r, delta=>{
+      full+=delta;
+      if(model==='thinking'){
+        const tm=full.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+        const after=full.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*/gi,'').trim();
+        if(tm&&thinkContent) thinkContent.innerHTML=fmt(tm[1].trim())+'<span class="ai-cursor">▌</span>';
+        if(after&&answerBub) answerBub.innerHTML=fmt(after)+'<span class="ai-cursor">▌</span>';
+      } else {
+        const clean=full.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*/gi,'');
+        if(mainBub) mainBub.innerHTML=fmt(clean)+'<span class="ai-cursor">▌</span>';
+      }
+      msgsEl.scrollTop=msgsEl.scrollHeight;
+    });
+
+    // Final render
+    const cleanFull=full.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*/gi,'').trim();
+    if(model==='thinking'){
+      const tm=full.match(/<think>([\s\S]*?)<\/think>/i);
+      if(tm&&thinkContent){
+        thinkContent.innerHTML=fmt(tm[1].trim());
+        thinkContent.style.maxHeight=thinkContent.scrollHeight+'px';
+        // Auto-collapse think box once answer is ready
+        if(cleanFull){
+          setTimeout(()=>{thinkContent.style.maxHeight='0';thinkContent.style.overflow='hidden';aCol.querySelector('.think-box-toggle').textContent='Show';},400);
+        }
+      }
+      if(answerBub){answerBub.innerHTML=fmt(cleanFull);addActs(aCol,cleanFull,true);}
+    } else {
+      if(mainBub){mainBub.innerHTML=fmt(cleanFull);addActs(aCol,cleanFull,true);}
+    }
+
+    const saved=cleanFull||full.replace(/<\/?think[^>]*>/gi,'').trim();
+    if(saved){hist.push({role:'assistant',content:saved});await saveSess(text);}
+    else hist.pop();
+
+  } catch(e){
+    tRow.remove(); hist.pop();
+    const m=e.message||'';
+    addMsg('ai',m==='rate_limit'||m.includes('429')||m.includes('rate')?'⏳ Rate limited — please wait a moment and try again.':'⚠️ '+m);
+  } finally {
+    busy=false; sendBtn.disabled=false; msgsEl.scrollTop=msgsEl.scrollHeight; inp.focus();
+  }
 }
 
-// ── Regenerate last response ──
+// ── Regenerate ──
 async function regenerate(){
   if(busy||hist.length<2) return;
-  // Remove last assistant message
   if(hist[hist.length-1].role==='assistant') hist.pop();
-  // Remove last AI bubble from DOM
-  const bubbles=[...msgsInner.querySelectorAll('.ai-msg.ai')];
-  if(bubbles.length) bubbles[bubbles.length-1].remove();
-  // Re-send
-  const lastUser=hist[hist.length-1];
+  [...msgsInner.querySelectorAll('.ai-msg.ai')].pop()?.remove();
   busy=true; sendBtn.disabled=true;
-  const thinkEl=addThinking();
   const model=modelSel.value;
-  const sys=getSystemPrompt(model);
-  const _histLimit2=aiSettings.historyLimit||24;
-  
-  // For thinking mode, modify the system prompt to include internal monologue
-  let finalSystemPrompt = sys;
-  let finalUserContent = lastUser.content;
-  
-  if(model === 'thinking'){
-    const questionType = detectQuestionType(lastUser._text || '');
-    const thinkingPrompt = THINKING_PROMPTS[questionType];
-    finalSystemPrompt = `${sys}\n\n${thinkingPrompt}`;
-    
-    // For thinking mode, we want the AI to think about the question first
-    if(typeof lastUser.content === 'string'){
-      finalUserContent = `Question: ${lastUser.content}\n\nThink step-by-step about this question. Show your reasoning process.`;
-    }
-  }
-  
-  const msgs=[{role:'system',content:finalSystemPrompt},...hist.slice(0,-1).slice(-_histLimit2+1).map(m=>({role:m.role,content:m.content})),{role:'user',content:finalUserContent}];
-  try {
-    const useStream = (model==='fast' || model==='thinking') && (aiSettings.stream !== false);
-    const _temp = aiSettings.temperature ?? 1.0;
-    const body={model:MODELS[model],max_tokens:MAX_TOKS[model],stream:useStream,temperature:_temp,messages:msgs};
-    const r=await fetchAI(body, thinkEl);
-    if(!r) throw new Error('rate_limit');
-    if(!r.ok){const d=await r.json();throw new Error(d.error?.message||'HTTP '+r.status);}
-    removeThinking(thinkEl, () => {
-      processAIResponse(r, model, useStream);
-    });
-    return;
-    if(useStream){
-      const row=addMsg('ai','');
-      const bub=row.querySelector('.ai-bubble');
-      const reader=r.body.getReader(), dec=new TextDecoder(); let buf='';
-      while(true){
-        const {done,value}=await reader.read(); if(done) break;
-        buf+=dec.decode(value,{stream:true});
-        const parts=buf.split('\n'); buf=parts.pop();
-        for(const line of parts){
-          if(!line.startsWith('data:')) continue;
-          const d=line.slice(5).trim(); if(d==='[DONE]') break;
-          try{
-            const delta=JSON.parse(d).choices?.[0]?.delta?.content;
-            if(delta){ full+=delta; bub.textContent=full; msgsEl.scrollTop=msgsEl.scrollHeight; }
-          }catch(e){}
-        }
-      }
-      bub.innerHTML=fmtWithCopy(full);
-      msgsEl.scrollTop=msgsEl.scrollHeight;
-      addActions(row,row.querySelector('.msg-col'),full,true);
-    } else {
-      const data=await r.json(); full=(data.choices?.[0]?.message?.content?.trim()||'').replace(/<think[\s\S]*?<\/think>/gi,'').trim();
-      const row=addMsg('ai',full); addActions(row,row.querySelector('.msg-col'),full,true);
-    }
-    if(full){hist.push({role:'assistant',content:full}); await saveSess();}
-  } catch(e){ thinkEl?.remove(); addMsg('ai','⚠️ '+(e.message||'Regenerate failed')); }
-  busy=false; sendBtn.disabled=false; msgsEl.scrollTop=msgsEl.scrollHeight; inp.focus();
+  const msgs=[{role:'system',content:SYS[model]},...hist.map(m=>({role:m.role,content:m.content}))];
+  const tRow=mkRow('ai'),tCol=mkCol(),tBub=mkBub('ai');
+  tBub.innerHTML='<div class="ai-typing-dot"><span></span><span></span><span></span></div>';
+  tCol.appendChild(tBub);tRow.append(mkAv('ai'),tCol);msgsInner.appendChild(tRow);msgsEl.scrollTop=msgsEl.scrollHeight;
+  try{
+    const r=await fetchAI(msgs);
+    if(!r?.ok){const d=await r?.json();throw new Error(d?.error?.message||'Failed');}
+    tRow.remove();
+    const aRow=mkRow('ai'),aCol=mkCol(),aB=mkBub('ai');aCol.appendChild(aB);aRow.append(mkAv('ai'),aCol);msgsInner.appendChild(aRow);
+    let full='';
+    await streamInto(r,delta=>{full+=delta;const clean=full.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*/gi,'');aB.innerHTML=fmt(clean)+'<span class="ai-cursor">▌</span>';msgsEl.scrollTop=msgsEl.scrollHeight;});
+    const clean=full.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*/gi,'').trim();
+    aB.innerHTML=fmt(clean);addActs(aCol,clean,true);
+    if(clean){hist.push({role:'assistant',content:clean});await saveSess();}
+  } catch(e){tRow.remove();addMsg('ai','⚠️ '+(e.message||'Retry failed'));}
+  busy=false;sendBtn.disabled=false;msgsEl.scrollTop=msgsEl.scrollHeight;inp.focus();
 }
 
-// ── Export chat ──
- $('export-btn').addEventListener('click', ()=>{
+// ── Export ──
+$('export-btn').addEventListener('click',()=>{
   if(!hist.length){toast('Nothing to export yet');return;}
-  const lines=hist.filter(m=>m.role!=='system').map(m=>{
-    const role=m.role==='user'?'You':'SchoolChat AI';
-    const text=typeof m.content==='string'?m.content:(m._text||'[image]');
-    return `[${role}]\n${text}\n`;
-  });
+  const lines=hist.filter(m=>m.role!=='system').map(m=>`[${m.role==='user'?'You':'SchoolChat AI'}]\n${typeof m.content==='string'?m.content:(m._text||'[image]')}\n`);
   const blob=new Blob([lines.join('\n---\n\n')],{type:'text/plain'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='schoolchat-ai-'+new Date().toISOString().slice(0,10)+'.txt';
-  a.click(); URL.revokeObjectURL(a.href);
-  toast('✅ Chat exported');
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='schoolchat-ai-'+new Date().toISOString().slice(0,10)+'.txt';a.click();URL.revokeObjectURL(a.href);toast('✅ Exported');
 });
 
-// ── Message actions (copy, regenerate) ──
-function addActions(row, col, text, isAI){
-  const acts=document.createElement('div'); acts.className='msg-actions';
-  // Copy button
-  const copyBtn=document.createElement('button'); copyBtn.className='mact'; copyBtn.textContent='Copy';
-  copyBtn.addEventListener('click',()=>{
-    navigator.clipboard.writeText(text||'').then(()=>{
-      copyBtn.textContent='✓ Copied'; copyBtn.classList.add('copied');
-      setTimeout(()=>{copyBtn.textContent='Copy';copyBtn.classList.remove('copied');},2000);
-    }).catch(()=>toast('Could not copy'));
-  });
-  acts.appendChild(copyBtn);
-  // Regenerate button on AI messages only
-  if(isAI){
-    const regenBtn=document.createElement('button'); regenBtn.className='mact'; regenBtn.textContent='↻ Retry';
-    regenBtn.addEventListener('click', regenerate);
-    acts.appendChild(regenBtn);
-  }
-  col.appendChild(acts);
-}
-
-// ── UI helpers ──
-function mkRow(cls,noAnim=false){
-  const d=document.createElement('div'); d.className='ai-msg '+cls;
-  if(noAnim) d.style.animation='none'; return d;
-}
-function mkAv(role){
-  const d=document.createElement('div');
-  if(role==='user'){
-    d.className='ai-avatar user-av';
-    if(user && user.photoURL) d.innerHTML='<img src="' + encodeURI(user.photoURL) + '" alt="">';
-    else d.textContent=user?(user.displayName||user.email)[0].toUpperCase():'👤';
-  } else { d.className='ai-avatar bot-av'; d.textContent='✦'; }
-  return d;
-}
-function mkBub(role,text){
-  // Apply YouTube link transformation to all messages
-  const processedText = findAndTransformLinks(text);
-  
-  // Only process thinking/answer separation for AI messages
-  if(role === 'ai' || role === 'assistant'){
-    return createAIBubbles(processedText);
-  } else {
-    // User messages - escape and transform links
-    const d=document.createElement('div'); d.className='ai-bubble';
-    d.innerHTML=esc(processedText); return d;
-  }
-}
-
-function createAIBubbles(text){
-  const col=document.createElement('div'); col.className='msg-col';
-  
-  // Check if the response contains both thinking and answer
-  if(text.includes('Answer:')){
-    // Split the response at 'Answer:'
-    const parts = text.split('Answer:');
-    const thinkingPart = parts[0] || '';
-    const answerPart = parts[1] || '';
-    
-    // Add thinking container if there's thinking content
-    if(thinkingPart.trim()){
-      const thinkingContainer = createThinkingContainer(thinkingPart.trim());
-      col.appendChild(thinkingContainer);
-    }
-    
-    // Add answer bubble if there's answer content
-    if(answerPart.trim()){
-      const answerBub=document.createElement('div'); answerBub.className='ai-bubble';
-      answerBub.innerHTML=fmtWithCopy(answerPart.trim());
-      col.appendChild(answerBub);
-    }
-  } else if(text.includes('Thinking Process:') || text.startsWith(' Laos')){
-    // Only thinking content, no answer
-    const thinkingContainer = createThinkingContainer(text.trim());
-    col.appendChild(thinkingContainer);
-  } else {
-    // Regular answer content
-    const answerBub=document.createElement('div'); answerBub.className='ai-bubble';
-    answerBub.innerHTML=fmtWithCopy(text);
-    col.appendChild(answerBub);
-  }
-  
-  return col;
-}
-
-function createThinkingContainer(text){
-  const container=document.createElement('div'); container.className='thinking-container';
-  
-// Create header with title and collapse button
-const header=document.createElement('div'); header.className='thinking-container-header';
-  
-const titleSection=document.createElement('div'); titleSection.style.display='flex'; titleSection.style.alignItems='center';
-titleSection.innerHTML='<svg class="thinking-container-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span class="thinking-container-title">Thought Process</span>';
-  
-// Create collapse button
-const collapse=document.createElement('button'); collapse.className='thinking-container-collapse';
-collapse.textContent='Hide';
-collapse.addEventListener('click', () => {
-  if(container.classList.contains('collapsed')){
-    container.classList.remove('collapsed');
-    collapse.textContent='Hide';
-  } else {
-    container.classList.add('collapsed');
-    collapse.textContent='Show';
-  }
-});
-  
-header.appendChild(titleSection);
-header.appendChild(collapse);
-  
-// Create content
-const content=document.createElement('div'); content.className='thinking-container-content';
-  container.appendChild(header);
-  container.appendChild(content);
-  
-  return container;
-}
-
-function detectQuestionType(text){
-  const lowerText = text.toLowerCase();
-  if(lowerText.includes('math') || lowerText.includes('solve') || lowerText.includes('calculate') || /\d+[\+\-\*\/]/.test(text)) {
-    return 'math';
-  }
-  if(lowerText.includes('essay') || lowerText.includes('write') || lowerText.includes('paragraph')) {
-    return 'essay';
-  }
-  if(lowerText.includes('science') || lowerText.includes('biology') || lowerText.includes('chemistry') || lowerText.includes('physics')) {
-    return 'science';
-  }
-  return 'general';
-}
-
-function addMsg(role,text,noAnim=false){
-  const row=mkRow(role,noAnim);
-  const bubbleContent = mkBub(role,text);
-  
-  if(role === 'ai' || role === 'assistant'){
-    // mkBub returns a col for AI messages
-    row.append(mkAv(role), bubbleContent);
-  } else {
-    // mkBub returns a bubble for user messages, need to wrap in col
-    const col=document.createElement('div'); col.className='msg-col';
-    col.appendChild(bubbleContent);
-    row.append(mkAv(role), col);
-  }
-  
-  msgsInner.appendChild(row); msgsEl.scrollTop=msgsEl.scrollHeight; return row;
-}
-
-function addThinking(){
-  const row=mkRow('ai');
-  const av=document.createElement('div'); av.className='ai-avatar bot-av'; av.textContent='✦';
-  const col=document.createElement('div'); col.className='msg-col';
-  const bub=document.createElement('div'); bub.className='ai-bubble';
-  const isThinkingMode = modelSel.value === 'thinking';
-  bub.innerHTML=(isThinkingMode?'<div class="think-label thinking-mode">🧠 Thinking…</div>':'<div class="think-label">⚡ Thinking…</div>')+'<div class="ai-typing-dot'+(isThinkingMode?' thinking-mode':'')+'"><span></span><span></span><span></span></div>';
-  col.appendChild(bub); row.append(av,col); msgsInner.appendChild(row); msgsEl.scrollTop=msgsEl.scrollHeight; return row;
-}
-
-function removeThinking(thinkEl, callback){
-  if(!thinkEl) {
-    if(callback) callback();
-    return;
-  }
-  
-  const bubble = thinkEl.querySelector('.ai-bubble');
-  if(bubble){
-    bubble.classList.add('fade-out');
-    setTimeout(() => {
-      thinkEl.remove();
-      if(callback) callback();
-    }, 300);
-  } else {
-    thinkEl.remove();
-    if(callback) callback();
-  }
-}
-
-async function processAIResponse(r, model, useStream){
-  if(model === 'thinking'){
-    await processThinkingModeResponse(r, useStream);
-  } else {
-    // Fast mode - skip thinking container entirely
-    await processStandardResponse(r, useStream);
-  }
-}
-
-async function processThinkingModeResponse(r, useStream){
-  // Phase 1: Stream thinking content into thinking container
-  const row=mkRow('ai');
-  const av=mkAv('ai');
-  const col=document.createElement('div'); col.className='msg-col';
-  
-  // Create standardized thought box
-  const thinkingContainer = createThinkingContainer('');
-  const thinkingContent = thinkingContainer.querySelector('.thinking-container-content');
-  col.appendChild(thinkingContainer);
-  row.append(av, col);
-  msgsInner.appendChild(row);
-  msgsEl.scrollTop=msgsEl.scrollHeight;
-  
-  let fullResponse = '';
-  let answerStarted = false;
-  let answerBub = null;
-  let hasThinkingContent = false;
-  let thinkingContentText = '';
-  
-  if(useStream){
-    const reader=r.body.getReader(), dec=new TextDecoder(); let buf='';
-    while(true){
-      const {done,value}=await reader.read(); if(done) break;
-      buf+=dec.decode(value,{stream:true});
-      const parts=buf.split('\n'); buf=parts.pop();
-      for(const line of parts){
-        if(!line.startsWith('data:')) continue;
-        const d=line.slice(5).trim(); if(d==='[DONE]') break;
-        let content='';
-        try{ content=JSON.parse(d).choices?.[0]?.delta?.content||''; }catch(e){ continue; }
-        if(!content) continue;
-        fullResponse += content;
-          
-          // Robust check for both transition keywords
-          if(content.includes('Answer:') || content.includes('Thinking Process:')){
-            if(content.includes('Answer:')){
-              answerStarted = true;
-              const parts = fullResponse.split('Answer:');
-              thinkingContentText = parts[0] || '';
-              const answerPart = parts[1] || '';
-              
-              // Update title and show thinking content
-              if(thinkingContentText.trim()){
-                const titleElement = thinkingContainer.querySelector('.thinking-container-title');
-                titleElement.textContent = 'Thought Process';
-                thinkingContent.innerHTML=fmtWithCopy(thinkingContentText.trim());
-                hasThinkingContent = true;
-              }
-              
-              // Create answer bubble if not exists
-              if(!answerBub){
-                answerBub=document.createElement('div'); 
-                answerBub.className='ai-bubble fade-in';
-                col.appendChild(answerBub);
-              }
-            }
-          }
-      }
-    }
-    
-    if(fullResponse.includes('Answer:')){
-      const parts = fullResponse.split('Answer:');
-      thinkingContentText = parts[0] || '';
-      const answerPart = parts[1] || '';
-      
-      // Update title and show thinking content
-      if(thinkingContentText.trim()){
-        const titleElement = thinkingContainer.querySelector('.thinking-container-title');
-        titleElement.textContent = 'Thought Process';
-        thinkingContent.innerHTML=fmtWithCopy(thinkingContentText.trim());
-        hasThinkingContent = true;
-      }
-      
-      if(answerPart.trim()){
-        answerBub=document.createElement('div'); 
-        answerBub.className='ai-bubble fade-in';
-        answerBub.innerHTML=fmtWithCopy(answerPart.trim());
-        col.appendChild(answerBub);
-      }
-    } else {
-      thinkingContentText = fullResponse;
-      if(thinkingContentText.trim()){
-        const titleElement = thinkingContainer.querySelector('.thinking-container-title');
-        titleElement.textContent = 'Thought Process';
-        thinkingContent.innerHTML=fmtWithCopy(thinkingContentText);
-        hasThinkingContent = true;
-      }
-    }
-  }
-  
-  // Fast mode fallback: if no thinking content was detected, remove thinking container and stream directly
-  if(!hasThinkingContent && !answerBub){
-    thinkingContainer.remove();
-    if(useStream && fullResponse.trim()){
-      // Stream the full response directly
-      const directBub=document.createElement('div'); 
-      directBub.className='ai-bubble fade-in';
-      col.appendChild(directBub);
-      
-      // Stream character by character
-      let charIndex = 0;
-      const streamInterval = setInterval(() => {
-        if(charIndex < fullResponse.length){
-          directBub.innerHTML=fmtWithCopy(fullResponse.slice(0, charIndex + 1));
-          charIndex++;
-        } else {
-          clearInterval(streamInterval);
-          // Save to history
-          hist.push({role:'assistant',content:fullResponse});
-          saveSess();
-          saveUserMemories();
-        }
-      }, 20); // 50 characters per second
-      return;
-    } else if(!useStream && fullResponse.trim()){
-      // Non-streaming response
-      const directBub=document.createElement('div'); 
-      directBub.className='ai-bubble';
-      directBub.innerHTML=fmtWithCopy(fullResponse);
-      col.appendChild(directBub);
-      hist.push({role:'assistant',content:fullResponse});
-      saveSess();
-      saveUserMemories();
-      return;
-    }
-  }
-  
-  // If no answer was generated, create one based on thinking
-  if(!answerBub && thinkingContentText.trim()){
-    await generateFinalAnswer(thinkingContentText, row, col);
-  } else if(answerBub){
-    // Save answer to history
-    const answerText = answerBub.textContent.trim();
-    if(answerText){
-      hist.push({role:'assistant',content:answerText});
-      await saveSess();
-    }
-    await saveUserMemories();
-  }
-}
-
-async function generateFinalAnswer(thoughtContent, existingRow, existingCol){
-  // Add answer bubble to existing message row
-  const answerBub=document.createElement('div'); answerBub.className='ai-bubble fade-in';
-  answerBub.innerHTML=''; // Will be populated by streaming
-  
-  existingCol.appendChild(answerBub);
-  
-  const userMessage = hist[hist.length-1].content;
-  const finalPrompt = `Based on your thinking process: "${thoughtContent}"
-
-Now provide the final, clear answer to this question: ${userMessage}
-
-Give a direct, helpful response without showing your thinking process again.`;
-  
-  try {
-    const body={
-      model:MODELS.thinking,
-      max_tokens:MAX_TOKS.thinking,
-      stream:true,
-      temperature:0.7,
-      messages:[
-        {role:'system',content:getSystemPrompt('thinking')},
-        {role:'user',content:finalPrompt}
-      ]
-    };
-    
-    const r=await fetchAI(body, null); // No thinking bubble for phase 2
-    if(!r.ok) throw new Error('Failed to generate final answer');
-    
-    const reader=r.body.getReader(), dec=new TextDecoder(); let buf='';
-    let fullResponse = '';
-    
-    while(true){
-      const {done,value}=await reader.read(); if(done) break;
-      buf+=dec.decode(value,{stream:true});
-      const parts=buf.split('\n'); buf=parts.pop();
-      for(const line of parts){
-        if(!line.startsWith('data:')) continue;
-        const d=line.slice(5).trim(); if(d==='[DONE]') break;
-        try{
-          const delta=JSON.parse(d).choices?.[0]?.delta?.content;
-          if(delta){ fullResponse+=delta; answerBub.textContent=fullResponse; msgsEl.scrollTop=msgsEl.scrollHeight; }
-        }catch(e){}
-      }
-    }
-    answerBub.innerHTML=fmtWithCopy(fullResponse);
-    
-    if(fullResponse){
-      hist.push({role:'assistant',content:fullResponse});
-      await saveSess();
-    }
-  } catch(e){
-    console.error('Error generating final answer:', e);
-    answerBub.innerHTML = '<em>Sorry, I had trouble generating my final answer. Please try again.</em>';
-  }
-  
-  await saveUserMemories();
-}
-
-async function processStandardResponse(r, useStream){
-  let full='';
-  if(useStream){
-    const row=addMsg('ai','');
-    const bub=row.querySelector('.ai-bubble');
-    bub.classList.add('fade-in');
-    const reader=r.body.getReader(), dec=new TextDecoder(); let buf='';
-    while(true){
-      const {done,value}=await reader.read(); if(done) break;
-      buf+=dec.decode(value,{stream:true});
-      const parts=buf.split('\n'); buf=parts.pop();
-      for(const line of parts){
-        if(!line.startsWith('data:')) continue;
-        const d=line.slice(5).trim(); if(d==='[DONE]') break;
-        try{
-          const delta=JSON.parse(d).choices?.[0]?.delta?.content;
-          if(delta){ full+=delta; bub.textContent=full; msgsEl.scrollTop=msgsEl.scrollHeight; }
-        }catch(e){}
-      }
-    }
-    bub.innerHTML=fmtWithCopy(full);
-    msgsEl.scrollTop=msgsEl.scrollHeight;
-    addActions(row,row.querySelector('.msg-col'),full,true);
-    full=bub.textContent.trim();
-    if(full){hist.push({role:'assistant',content:full}); await saveSess();}
-  } else {
-    const d=await r.json(); full=d.choices?.[0]?.message?.content||'';
-    if(full){const row=addMsg('ai',full); addActions(row,row.querySelector('.msg-col'),full,true);}
-    if(full){hist.push({role:'assistant',content:full}); await saveSess();}
-  }
-  await saveUserMemories();
-}
-
-function resize(){inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,120)+'px';}
+$('clear-btn').addEventListener('click',newChat);
+$('new-chat-btn').addEventListener('click',newChat);
 inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
 sendBtn.addEventListener('click',send);
- $('new-chat-btn').addEventListener('click', newChat);
- $('delete-all-btn').addEventListener('click', deleteAllChats);
- $('clear-btn').addEventListener('click',newChat);
-
-// ── Standardized Thought Box Component ──
-function createThinkingContainer(text){
-  return createThoughtBox(text);
-}
-
-// ── YouTube embedder ──
-function findAndTransformLinks(text){
-  if(!text) return text;
-  try {
-    const youtubePatterns = [
-      /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/g,
-      /https?:\/\/youtu\.be\/([a-zA-Z0-9_-]{11})/g,
-      /https?:\/\/(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/g,
-      /https?:\/\/m\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/g
-    ];
-    let processedText = text;
-    const embeddedVideos = new Set();
-    youtubePatterns.forEach((pattern) => {
-      let match;
-      while ((match = pattern.exec(text)) !== null) {
-        const videoId = match[1];
-        if(!embeddedVideos.has(videoId)){
-          const embedUrl = 'https://www.youtube.com/embed/'+videoId;
-          const embedHtml = '<div class="youtube-link-container"><div class="youtube-link-title"><span>📺 YouTube Video</span></div><div class="youtube-embed"><iframe src="' + embedUrl + '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div></div>';
-          processedText = processedText.replace(match[0], embedHtml);
-          embeddedVideos.add(videoId);
-        }
-      }
-    });
-    return processedText;
-  } catch(error) {
-    return text;
-  }
-}
-
-// ── Markdown with copy buttons on code blocks ──
-function fmtWithCopy(raw){
-  const html=fmt(raw);
-  // Wrap pre blocks with a copy button
-  return html.replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/g, (match,code)=>{
-    const escaped=code.replace(/'/g,"\\'").replace(/\n/g,'\\n');
-    return `<pre><button class="pre-copy" onclick="copyCode(this,'${escaped}')">Copy</button><code>${code}</code></pre>`;
-  });
-}
-
-window.copyCode=(btn,code)=>{
-  navigator.clipboard.writeText(code.replace(/\\n/g,'\n')).then(()=>{
-    btn.textContent='✓'; setTimeout(()=>btn.textContent='Copy',2000);
-  }).catch(()=>{});
-};
-
-function fmt(raw){
-  if(!raw)return '';
-  // Use marked.js for proper markdown parsing
-  const html = marked.parse(raw);
-  return html;
-}
-
-function inl(s){return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/_(.+?)_/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\[(.+?)\]\((https?:\/\/[^\)]+)\)/g,'<a href="$2" target="_blank" rel="noopener" style="color:var(--accent)">$1</a>');}
-
-// ── AI Settings ──
-const SETTINGS_STORAGE_KEY = 'sc_ai_settings';
-const DEFAULTS = {
-  sysAddFast: '',
-  sysAddThinking: '',
-  memories: [],
-  memInject: true,
-  markdown: true,
-  stream: true,
-  historyLimit: 24,
-  temperature: 1.0
-};
-
-let aiSettings = {...DEFAULTS};
-
-function loadSettings(){
-  try {
-    const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if(saved) aiSettings = {...DEFAULTS, ...JSON.parse(saved)};
-  } catch(e){}
-}
-
-function saveSettings(){
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(aiSettings));
-}
-
-// ── Settings Panel UI ──
-function openSettingsPanel(){
-  // Populate fields from current settings
-  $('sp-sys-fast').value = aiSettings.sysAddFast || '';
-  $('sp-sys-thinking').value = aiSettings.sysAddThinking || '';
-  $('sp-history-limit').value = String(aiSettings.historyLimit || 24);
-  $('sp-temperature').value = aiSettings.temperature ?? 1.0;
-  $('sp-temp-val').textContent = (aiSettings.temperature ?? 1.0).toFixed(1);
-  setToggle('sp-toggle-markdown', aiSettings.markdown !== false);
-  setToggle('sp-toggle-stream', aiSettings.stream !== false);
-  setToggle('sp-mem-inject-toggle', aiSettings.memInject !== false);
-  renderMemoryList();
-  renderAIMemories();
-  $('ai-settings-overlay').classList.add('open');
-}
-
-function closeSettingsPanel(){
-  $('ai-settings-overlay').classList.remove('open');
-}
-
-function setToggle(id, on){
-  const el = $(id);
-  if(!el) return;
-  el.classList.toggle('on', on);
-}
-
-function renderMemoryList(){
-  const list = $('sp-mem-list');
-  list.innerHTML = '';
-  const mems = aiSettings.memories || [];
-  $('sp-mem-count').textContent = mems.length;
-  if(!mems.length){
-    list.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);padding:8px 0;">No memory facts yet. Add one below.</div>';
-    return;
-  }
-  mems.forEach((m, i) => {
-    const el = document.createElement('div');
-    el.className = 'mem-item';
-    el.innerHTML = `<span class="mem-item-text">${esc(m)}</span><button class="mem-del" data-i="${i}" title="Remove">×</button>`;
-    el.querySelector('.mem-del').addEventListener('click', () => {
-      aiSettings.memories.splice(i, 1);
-      renderMemoryList();
-    });
-    list.appendChild(el);
-  });
-}
-
-function renderAIMemories(){
-  const statusBadge = $('sp-ai-mem-status');
-  const memText = $('sp-ai-mem-text');
-  const deleteBtn = $('sp-ai-mem-delete');
-  
-  if(!userMemories){
-    statusBadge.textContent = 'None';
-    statusBadge.style.background = 'var(--surface3)';
-    statusBadge.style.color = 'var(--muted)';
-    memText.textContent = 'No memories stored yet. Chat with the AI to build memories about you.';
-    deleteBtn.style.display = 'none';
-  } else {
-    statusBadge.textContent = 'Stored';
-    statusBadge.style.background = 'var(--accent-dim)';
-    statusBadge.style.color = 'var(--accent)';
-    memText.textContent = userMemories;
-    deleteBtn.style.display = 'block';
-  }
-}
-
-// Tab switching
-document.querySelectorAll('.sp-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.sp-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    ['prompt','memory','behavior'].forEach(name => {
-      const el = $('sp-tab-'+name);
-      if(el) el.style.display = tab.dataset.tab === name ? '' : 'none';
-    });
-  });
-});
-
-// Toggle buttons
-['sp-toggle-markdown','sp-toggle-stream','sp-mem-inject-toggle'].forEach(id => {
-  const el = $(id);
-  if(!el) return;
-  el.addEventListener('click', () => {
-    el.classList.toggle('on');
-    const setting = id.replace('sp-toggle-', '').replace('-toggle', '');
-    aiSettings[setting] = el.classList.contains('on');
-    saveSettings();
-  });
-});
-
-// AI memories delete button
- $('sp-ai-mem-delete').addEventListener('click', async () => {
-  if(!user) return;
-  
-  const confirmed = confirm('Clear all AI memories about you? The AI will forget what it has learned from your conversations.');
-  if(!confirmed) return;
-  
-  try {
-    await db.collection('userMemories').doc(user.uid).delete();
-    userMemories = '';
-    renderAIMemories();
-    showToast('AI memories cleared');
-  } catch(e){
-    console.error('Error clearing AI memories:', e);
-    showToast('Error clearing memories');
-  }
-});
-
-// Temperature slider
- $('sp-temperature').addEventListener('input', function(){
-  $('sp-temp-val').textContent = parseFloat(this.value).toFixed(1);
-});
-
-// Memory add
-function addMemory(){
-  const inp = $('sp-mem-input');
-  const val = inp.value.trim();
-  if(!val) return;
-  if(!aiSettings.memories) aiSettings.memories = [];
-  if(aiSettings.memories.length >= 20){ toast('Max 20 memory facts'); return; }
-  aiSettings.memories.push(val);
-  inp.value = '';
-  renderMemoryList();
-}
- $('sp-mem-add-btn').addEventListener('click', addMemory);
- $('sp-mem-input').addEventListener('keydown', e => { if(e.key === 'Enter') addMemory(); });
-
-// Save
- $('sp-save-btn').addEventListener('click', () => {
-  aiSettings.sysAddFast = $('sp-sys-fast').value.trim();
-  aiSettings.sysAddThinking = $('sp-sys-thinking').value.trim();
-  aiSettings.historyLimit = parseInt($('sp-history-limit').value) || 24;
-  aiSettings.temperature = parseFloat($('sp-temperature').value) || 1.0;
-  aiSettings.markdown = $('sp-toggle-markdown').classList.contains('on');
-  aiSettings.stream = $('sp-toggle-stream').classList.contains('on');
-  aiSettings.memInject = $('sp-mem-inject-toggle').classList.contains('on');
-  // memories already updated in-place
-  saveSettings();
-  closeSettingsPanel();
-  toast('✅ Settings saved');
-});
-
-// Reset
- $('sp-reset-btn').addEventListener('click', () => {
-  if(!confirm('Reset all settings to defaults?')) return;
-  aiSettings = {...DEFAULTS};
-  saveSettings();
-  openSettingsPanel();
-  toast('Settings reset to defaults');
-});
-
-// Close
- $('sp-close-btn').addEventListener('click', closeSettingsPanel);
- $('ai-settings-overlay').addEventListener('click', e => { if(e.target === $('ai-settings-overlay')) closeSettingsPanel(); });
-document.addEventListener('keydown', e => { if(e.key === 'Escape') closeSettingsPanel(); });
-
-// Open button
- $('ai-settings-btn').addEventListener('click', openSettingsPanel);
-
-// Load settings on startup
-loadSettings();
-
-})(); // Close async IIFE
-
+function resize(){inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,120)+'px';}
 </script>
-
-<!-- AI Settings Panel -->
-<div id="ai-settings-overlay">
-  <div id="ai-settings-panel">
-    <div class="sp-header">
-      <span class="sp-title">⚙ AI Settings</span>
-      <button class="sp-close" id="sp-close-btn">✕</button>
-    </div>
-    <div class="sp-tabs">
-      <button class="sp-tab active" data-tab="prompt">System Prompt</button>
-      <button class="sp-tab" data-tab="memory">Memory</button>
-      <button class="sp-tab" data-tab="behavior">Behavior</button>
-    </div>
-    <!-- System Prompt tab -->
-    <div class="sp-body" id="sp-tab-prompt">
-      <div class="sp-section">
-        <div class="sp-label">Fast Mode Prompt</div>
-        <div class="sp-desc">Appended to the Fast (⚡) model system prompt. Leave blank to use the default.</div>
-        <textarea class="sp-textarea" id="sp-sys-fast" rows="5" placeholder="e.g. Always respond in bullet points. Focus on math and science."></textarea>
-      </div>
-      <div class="sp-section">
-        <div class="sp-label">Thinking Mode Prompt</div>
-        <div class="sp-desc">Appended to the Thinking (🧠) model system prompt. Leave blank to use the default.</div>
-        <textarea class="sp-textarea" id="sp-sys-thinking" rows="5" placeholder="e.g. Always show your working. Use LaTeX for equations."></textarea>
-      </div>
-
-    </div>
-    <!-- Memory tab -->
-    <div class="sp-body" id="sp-tab-memory" style="display:none;">
-      <div class="sp-section">
-        <div class="sp-label">AI Memories About You <span class="sp-badge" id="sp-ai-mem-status">Loading...</span></div>
-        <div class="sp-desc">What the AI has learned about you from conversations. This helps provide personalized help.</div>
-        <div id="sp-ai-mem-container">
-          <div class="ai-mem-item">
-            <div class="ai-mem-text" id="sp-ai-mem-text">Loading AI memories...</div>
-            <button class="ai-mem-delete" id="sp-ai-mem-delete" title="Clear AI memories">🗑️</button>
-          </div>
-        </div>
-      </div>
-      <div class="sp-section">
-        <div class="sp-label">Persistent Memory <span class="sp-badge" id="sp-mem-count">0</span></div>
-        <div class="sp-desc">Facts always included at the start of every conversation. The AI will remember these across all chats.</div>
-        <div id="sp-mem-list"></div>
-        <div class="mem-add-row">
-          <input class="mem-add-inp" id="sp-mem-input" type="text" placeholder="e.g. My name is Alex. I am in Year 10." maxlength="200">
-          <button class="mem-add-btn" id="sp-mem-add-btn">+ Add</button>
-        </div>
-      </div>
-      <div class="sp-section">
-        <div class="sp-label">Memory Context</div>
-        <div class="sp-desc">How memory is injected into the conversation.</div>
-        <div class="sp-row">
-          <div><div class="sp-row-label">Include in system prompt</div><div class="sp-row-sub">Memory facts are added before the system prompt</div></div>
-          <button class="sp-toggle on" id="sp-mem-inject-toggle"></button>
-        </div>
-      </div>
-    </div>
-    <!-- Behavior tab -->
-    <div class="sp-body" id="sp-tab-behavior" style="display:none;">
-      <div class="sp-section">
-        <div class="sp-label">Response Style</div>
-        <div class="sp-row">
-          <div><div class="sp-row-label">Markdown formatting</div><div class="sp-row-sub">Bold, italics, code blocks, tables</div></div>
-          <button class="sp-toggle on" id="sp-toggle-markdown"></button>
-        </div>
-        <div class="sp-row">
-          <div><div class="sp-row-label">Stream responses</div><div class="sp-row-sub">Show text as it arrives (Fast mode only)</div></div>
-          <button class="sp-toggle on" id="sp-toggle-stream"></button>
-        </div>
-      </div>
-      <div class="sp-section">
-        <div class="sp-label">Memory Limit</div>
-        <div class="sp-desc">How many past messages to include in each request.</div>
-        <select class="sp-select" id="sp-history-limit">
-          <option value="8">Last 8 messages</option>
-          <option value="16">Last 16 messages</option>
-          <option value="24" selected>Last 24 messages (default)</option>
-          <option value="40">Last 40 messages</option>
-        </select>
-      </div>
-      <div class="sp-section">
-        <div class="sp-label">Temperature</div>
-        <div class="sp-desc">Controls creativity. Lower = more focused, higher = more creative.</div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <input type="range" id="sp-temperature" min="0" max="2" step="0.1" value="1" style="flex:1;accent-color:var(--accent);">
-          <span id="sp-temp-val" style="font-size:0.8rem;color:var(--text);min-width:24px;text-align:right;">1.0</span>
-        </div>
-      </div>
-    </div>
-    <div class="sp-footer">
-      <button class="sp-reset" id="sp-reset-btn">Reset</button>
-      <button class="sp-save" id="sp-save-btn">Save Settings</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
