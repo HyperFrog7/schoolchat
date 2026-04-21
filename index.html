@@ -6121,6 +6121,10 @@
             <span class="ch-icon">#</span>
             <span class="ch-name">gn-math</span>
           </div>
+          <div class="channel-item" onclick="openPetezahGames()" style="margin-top: 4px;">
+            <span class="ch-icon">🎮</span>
+            <span class="ch-name">Petezah Games</span>
+          </div>
         </div>
 
       </div>
@@ -13696,12 +13700,22 @@
         : 'gemini-2.5-flash-lite';
       const maxTok = _aiSelectedModel === 'thinking' ? 8000 : 800;
 
-      async function fetchAIPanel(body, thinkEl, retries = 3, delay = 8000) {
+      async function fetchAIPanel(messages, thinkEl, retries = 3, delay = 8000) {
         for (let attempt = 0; attempt <= retries; attempt++) {
-          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=AIzaSyBNSEw-jjgiCol25FR8g_ALvAoo21vpbzk`, {
+          const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'HTTP-Referer': location.href, 'X-Title': 'SchoolChat AI' },
-            body: JSON.stringify(body)
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer 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',
+              'HTTP-Referer': location.href,
+              'X-Title': 'SchoolChat AI'
+            },
+            body: JSON.stringify({
+              model: 'nvidia/nemotron-3-super-120b-a12b:free',
+              max_tokens: maxTok,
+              stream: true,
+              messages
+            })
           });
           if (r.status === 429) {
             if (attempt === retries) throw new Error('rate_limit');
@@ -13719,36 +13733,72 @@
       }
 
       try {
-        // Build Gemini contents format from history
-        const contents = [];
+        // Build OpenAI-compatible messages array with vision support
+        const messages = [{ role: 'system', content: sys }];
         for (const msg of _aiHistory.slice(0, -1)) {
-          contents.push({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: typeof msg.content === 'string' ? msg.content : (msg.content[1]?.text || msg.content[0]?.text || '') }]
+          messages.push({
+            role: msg.role === 'assistant' ? 'assistant' : 'user',
+            content: typeof msg.content === 'string' ? msg.content : (msg.content[1]?.text || msg.content[0]?.text || '')
           });
         }
-        // Add current message (may include image)
+        // Last message — pass image if present (vision)
         if (Array.isArray(userContent)) {
-          const parts = userContent.map(c => c.type === 'image_url'
-            ? { inlineData: { mimeType: 'image/jpeg', data: c.image_url.url.split(',')[1] } }
-            : { text: c.text || '' }
-          );
-          contents.push({ role: 'user', parts });
+          messages.push({
+            role: 'user',
+            content: userContent.map(c => c.type === 'image_url'
+              ? { type: 'image_url', image_url: { url: c.image_url.url } }
+              : { type: 'text', text: c.text || '' }
+            )
+          });
         } else {
-          contents.push({ role: 'user', parts: [{ text: userContent }] });
+          messages.push({ role: 'user', content: userContent });
         }
-        const resp = await fetchAIPanel({
-          contents,
-          systemInstruction: { parts: [{ text: sys }] },
-          generationConfig: { maxOutputTokens: maxTok, temperature: 0.7 }
-        }, thinkEl);
+
+        const resp = await fetchAIPanel(messages, thinkEl);
         if (!resp) throw new Error('rate_limit');
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error?.message || 'HTTP ' + resp.status);
-        const full = (data.choices?.[0]?.message?.content?.trim() || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-        if (!full) throw new Error('The AI returned an empty response. Try rephrasing your question.');
+        if (!resp.ok) {
+          const errData = await resp.json();
+          throw new Error(errData.error?.message || 'HTTP ' + resp.status);
+        }
+
+        // Streaming — replace think bubble with live streaming bubble
         thinkEl.remove();
-        appendAIMsg('ai', full);
+        const streamWrap = appendAIMsg('ai', '');
+        const streamBub = streamWrap.querySelector('.ai-bubble');
+        let full = '';
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop(); // keep incomplete line in buffer
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed === 'data: [DONE]') continue;
+            if (!trimmed.startsWith('data: ')) continue;
+            try {
+              const json = JSON.parse(trimmed.slice(6));
+              const delta = json.choices?.[0]?.delta?.content || '';
+              if (delta) {
+                full += delta;
+                // Strip think tags in real time
+                const display = full.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<think>[\s\S]*/gi, '');
+                streamBub.innerHTML = formatAIText(display) + '<span class="ai-cursor">▌</span>';
+                document.getElementById('ai-messages').scrollTop = 9999;
+              }
+            } catch (e) { /* skip malformed chunk */ }
+          }
+        }
+
+        // Final render without cursor
+        full = full.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+        if (!full) throw new Error('The AI returned an empty response. Try rephrasing your question.');
+        streamBub.innerHTML = formatAIText(full);
         _aiHistory.push({ role: 'assistant', content: full });
       } catch (e) {
         thinkEl.remove(); _aiHistory.pop();
@@ -13813,7 +13863,7 @@
       try {
         stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always', frameRate: 5 }, audio: false });
       } catch (e) {
-        if (e.name !== 'NotAllowedError') showToast('\u26a0\ufe0f Screen share failed: ' + e.message);
+        if (e.name !== 'NotAllowedError') alert('Screen share failed: ' + e.message);
         return;
       }
 
@@ -13977,7 +14027,7 @@
       if (!tab) { showToast('⚠️ Allow popups to use this feature'); return; }
       try {
         const base = location.origin + location.pathname.replace(/[^/]*$/, '');
-        const html = await fetch('ai.html?t=' + Date.now()).then(r => r.text());
+        const html = await fetch('https://cdn.jsdelivr.net/gh/HyperFrog7/schoolchat@main/ai.html?t=' + Date.now()).then(r => r.text());
 
         // Parse into a document so we can walk the DOM safely
         const parser = new DOMParser();
@@ -16090,9 +16140,9 @@
 
 
   </div>
-  <script>window.openGNMath = () => {
-  fetch("https://cdn.jsdelivr.net/gh/HyperFrog7/schoolchat@main/gn-math.html?t=" + Date.now(), {
-  })
+  <script>
+window.openGNMath = () => {
+  fetch("https://cdn.jsdelivr.net/gh/HyperFrog7/schoolchat@main/gn-math.html?t=" + Date.now(), { cache: "no-store" })
     .then(response => response.text())
     .then(text => {
       const newWin = window.open("about:blank", "_blank");
@@ -16101,16 +16151,26 @@
         newWin.document.write(text);
         newWin.document.close();
       } else {
-        showToast('⚠️ Allow popups to play games');
+        alert('Allow popups to play games');
       }
     })
     .catch(err => {
       console.error(err);
-      showToast('⚠️ Failed to load math homework');
+      alert('Failed to load math homework');
     });
 };
-    };
-  </script>
+
+window.openPetezahGames = () => {
+  const url = 'https://cdn.jsdelivr.net/gh/PeteZah-G/PeteZahStaticDone@main/timmy-tuffnuckles.svg';
+  const newWin = window.open('about:blank', '_blank');
+  if (newWin) {
+    newWin.document.open();
+    newWin.document.write('<img src="' + url + '?t=' + Date.now() + '" style="max-width:100vw;max-height:100vh;object-fit:contain;">');
+    newWin.document.close();
+  } else {
+    alert('Allow popups to play games');
+  }
+}; </script>
 </body>
 
 </html>
